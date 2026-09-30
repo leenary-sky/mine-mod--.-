@@ -7,7 +7,8 @@
   ],
   "client": [
     "KeyMappingMixin",
-    "EntityMixin"
+    "EntityMixin",
+    "MultiPlayerGameModeMixin"
   ],
   "injectors": {
     "defaultRequire": 1
