@@ -44,7 +44,7 @@ public class RestrictionsScreen extends Screen {
         }
 
         if (parent != null) {
-            minecraft.setScreen(parent);
+            minecraft.gui.setScreen(parent);
         } else {
             super.onClose();
         }
