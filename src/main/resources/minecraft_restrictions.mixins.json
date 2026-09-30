@@ -6,7 +6,8 @@
     "BlockItemMixin"
   ],
   "client": [
-    "KeyMappingMixin"
+    "KeyMappingMixin",
+    "EntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
