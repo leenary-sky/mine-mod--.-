@@ -145,8 +145,8 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         int subtitleX = x + (width - font.width(subtitle)) / 2;
 
         // Only vertical placement is changed: the text is moved slightly down.
-        graphics.text(font, title, titleX, y + 30, 0xFFFFD83D, true);
-        graphics.text(font, subtitle, subtitleX, y + 60, 0xFFFFFFFF, true);
+        graphics.text(font, title, titleX, y + 36, 0xFFFFD83D, true);
+        graphics.text(font, subtitle, subtitleX, y + 66, 0xFFFFFFFF, true);
 
         final float scale = 1.75f;
         final int iconSize = Math.round(16 * scale);
