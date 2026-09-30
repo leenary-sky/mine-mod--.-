@@ -137,24 +137,33 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
 
         ItemStack icon = notificationIcon(notificationStage);
         var font = Minecraft.getInstance().font;
+
         String title = "ЗАДАНИЕ ВЫПОЛНЕНО";
         String subtitle = "НА ВАС НАЛОЖЕНО ОГРАНИЧЕНИЕ";
 
-        int textWidth = Math.max(font.width(title), font.width(subtitle));
-        int iconAreaWidth = 28;
-        int gap = 6;
-        int contentWidth = iconAreaWidth + gap + textWidth;
-        int contentStartX = x + (width - contentWidth) / 2;
+        // Text is centered against the whole notification, not against the space left by an icon.
+        int titleX = x + (width - font.width(title)) / 2;
+        int subtitleX = x + (width - font.width(subtitle)) / 2;
+
+        graphics.text(font, title, titleX, y + 26, 0xFFFFD83D, true);
+        graphics.text(font, subtitle, subtitleX, y + 56, 0xFFFFFFFF, true);
+
+        // Mirrored icons: same size, same vertical center, equal distance from the card edges.
+        final float scale = 1.75f;
+        final int iconBox = 28;
+        final int iconY = y + (height - Math.round(iconBox * scale)) / 2;
 
         graphics.pose().pushMatrix();
-        graphics.pose().translate(contentStartX, y + 36);
-        graphics.pose().scale(1.75f, 1.75f);
+        graphics.pose().translate(x + 58, iconY);
+        graphics.pose().scale(scale, scale);
         graphics.item(icon, 0, 0);
         graphics.pose().popMatrix();
 
-        int textX = contentStartX + iconAreaWidth + gap;
-        graphics.text(font, title, centeredX(font, title, textX, textWidth), y + 26, 0xFFFFD83D, true);
-        graphics.text(font, subtitle, centeredX(font, subtitle, textX, textWidth), y + 56, 0xFFFFFFFF, true);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x + width - 58 - iconBox * scale, iconY);
+        graphics.pose().scale(scale, scale);
+        graphics.item(icon, 0, 0);
+        graphics.pose().popMatrix();
     }
 
     private static ItemStack notificationIcon(int notificationStage) {
