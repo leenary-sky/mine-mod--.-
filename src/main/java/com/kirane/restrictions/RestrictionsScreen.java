@@ -2,6 +2,7 @@ package com.kirane.restrictions;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -39,18 +40,18 @@ public class RestrictionsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         int left = (width - PANEL_W) / 2;
         int top = (height - PANEL_H) / 2;
 
-        if (button == 0
-                && mouseX >= left + 8 && mouseX <= left + 34
-                && mouseY >= top + 8 && mouseY <= top + 34) {
+        if (event.button() == 0
+                && event.x() >= left + 8 && event.x() <= left + 34
+                && event.y() >= top + 8 && event.y() <= top + 34) {
             goBack();
             return true;
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
@@ -61,14 +62,12 @@ public class RestrictionsScreen extends Screen {
 
         graphics.fill(0, 0, width, height, 0x99000000);
 
-        // Minecraft-style frame: light top/left, dark bottom/right, very dark panel inside.
         graphics.fill(left + 4, top + 4, left + PANEL_W - 4, top + PANEL_H - 4, 0xFF121212);
         graphics.fill(left, top, left + PANEL_W, top + 4, 0xFFB0B0B0);
         graphics.fill(left, top + PANEL_H - 4, left + PANEL_W, top + PANEL_H, 0xFF303030);
         graphics.fill(left, top, left + 4, top + PANEL_H, 0xFFB0B0B0);
         graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF303030);
 
-        // Back arrow: the same bright white/shadowed treatment as the title.
         graphics.text(font, "←", left + 11, top + 11, 0xFFFFFFFF, true);
 
         graphics.text(font, "ПРАВИЛА ИСПЫТАНИЯ",
@@ -99,7 +98,6 @@ public class RestrictionsScreen extends Screen {
         final int rowH = 34;
 
         graphics.fill(x, y - 3, x + rowW, y + rowH - 3, 0xAA1D1D1D);
-
         graphics.item(icon, x + 6, y + 6);
 
         int textY = y + (rowH - font.lineHeight) / 2 - 3;
