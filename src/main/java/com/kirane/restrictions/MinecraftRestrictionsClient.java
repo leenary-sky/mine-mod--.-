@@ -22,11 +22,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public class MinecraftRestrictionsClient implements ClientModInitializer {
+    private static final KeyMapping.Category CONTROLS_CATEGORY =
+            KeyMapping.Category.register(Identifier.parse("minecraft_restrictions:controls"));
+
     private static final KeyMapping RULES_KEY = KeyMappingHelper.registerKeyMapping(
             new KeyMapping(
                     "key.minecraft_restrictions.rules",
                     InputConstants.KEY_J,
-                    KeyMapping.Category.register(Identifier.parse("minecraft_restrictions:controls"))
+                    CONTROLS_CATEGORY
             )
     );
 
@@ -34,7 +37,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             new KeyMapping(
                     "key.minecraft_restrictions.goal_visibility",
                     InputConstants.KEY_P,
-                    KeyMapping.Category.register(Identifier.parse("minecraft_restrictions:controls"))
+                    CONTROLS_CATEGORY
             )
     );
 
@@ -124,7 +127,6 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         final int width = 420;
         final int height = 104;
         final int x = (graphics.guiWidth() - width) / 2;
-        // Keep the restriction card clearly above the crosshair/center HUD.
         final int y = (graphics.guiHeight() - height) / 2 - 58;
 
         graphics.fill(x + 4, y + 4, x + width - 4, y + height - 4, 0xE7121212);
@@ -144,7 +146,6 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         int contentWidth = iconAreaWidth + gap + textWidth;
         int contentStartX = x + (width - contentWidth) / 2;
 
-        // Scale the item to 175% and keep it close to the text.
         graphics.pose().pushMatrix();
         graphics.pose().translate(contentStartX, y + 36);
         graphics.pose().scale(1.75f, 1.75f);
@@ -194,8 +195,6 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             }
 
             drawGoalBox(graphics, previousGoal, boxAlpha);
-
-            // Slow, highly visible strike-through animation.
             float strikeProgress = Math.max(0.0f, Math.min(1.0f, elapsed / 1150.0f));
             drawStrike(graphics, previousGoal, boxAlpha, strikeProgress);
             return;
@@ -207,8 +206,10 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
     private static void drawGoalBox(GuiGraphicsExtractor graphics, String goal, int alpha) {
         var font = Minecraft.getInstance().font;
 
-        final int width = Math.max(220, font.width(goal) + 34);
-        final int height = 30;
+        // Keep the original compact size and position: small yellow goal in the top-left.
+        final int paddingX = 8;
+        final int width = font.width(goal) + paddingX * 2;
+        final int height = 22;
         final int x = 8;
         final int y = 8;
 
@@ -216,27 +217,14 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         int bg = (backgroundAlpha << 24) | 0x111111;
         graphics.fill(x, y, x + width, y + height, bg);
 
-        int baseTextWidth = font.width(goal);
-        int centeredTextX = x + (width - baseTextWidth) / 2;
         int textY = y + (height - font.lineHeight) / 2;
-
-        // Slightly larger task text while keeping it exactly centered in the box.
-        graphics.pose().pushMatrix();
-        float scale = 1.25f;
-        float centerX = x + width / 2.0f;
-        float centerY = y + height / 2.0f;
-        graphics.pose().translate(centerX, centerY);
-        graphics.pose().scale(scale, scale);
-        graphics.pose().translate(-centerX, -centerY);
-        graphics.text(font, goal, centeredTextX, textY, (alpha << 24) | 0xFFD83D, true);
-        graphics.pose().popMatrix();
+        graphics.text(font, goal, x + paddingX, textY, (alpha << 24) | 0xFFD83D, true);
     }
 
     private static void drawStrike(GuiGraphicsExtractor graphics, String goal, int alpha, float progress) {
         var font = Minecraft.getInstance().font;
 
-        final int width = Math.max(220, font.width(goal) + 34);
-        final int height = 30;
+        final int width = font.width(goal) + 16;
         final int x = 8;
         final int y = 8;
 
@@ -245,13 +233,10 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
 
         int textWidth = font.width(goal);
         int textLeft = x + (width - textWidth) / 2;
-
-        // Slightly thicker and longer than before so the completion is unmistakable.
         int strikeWidth = Math.round((textWidth + 16) * progress);
         int strikeX = textLeft - 8;
 
-        graphics.fill(strikeX, y + height / 2 - 1, strikeX + strikeWidth,
-                y + height / 2 + 2, red);
+        graphics.fill(strikeX, y + 10, strikeX + strikeWidth, y + 12, red);
     }
 
     private static String goalForMask(int mask) {
