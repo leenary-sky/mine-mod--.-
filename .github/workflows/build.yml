@@ -41,11 +41,11 @@ jobs:
         run: |
           echo "Files produced in build/libs:"
           ls -lah build/libs
-          test -f build/libs/minecraft-restrictions-1.0.0.jar
+          test -f build/libs/minecraft-restrictions-1.1.0.jar
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: minecraft-restrictions-fabric-1.0.0
-          path: build/libs/minecraft-restrictions-1.0.0.jar
+          name: minecraft-restrictions-fabric-1.1.0
+          path: build/libs/minecraft-restrictions-1.1.0.jar
           if-no-files-found: error
