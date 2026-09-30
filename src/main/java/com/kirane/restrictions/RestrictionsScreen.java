@@ -62,14 +62,12 @@ public class RestrictionsScreen extends Screen {
 
         graphics.fill(0, 0, width, height, 0x99000000);
 
-        // Extremely dark interior; the border is intentionally lighter.
         graphics.fill(left + 4, top + 4, left + PANEL_W - 4, top + PANEL_H - 4, 0xFF121212);
         graphics.fill(left, top, left + PANEL_W, top + 4, 0xFFB0B0B0);
         graphics.fill(left, top + PANEL_H - 4, left + PANEL_W, top + PANEL_H, 0xFF303030);
         graphics.fill(left, top, left + 4, top + PANEL_H, 0xFFB0B0B0);
         graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF303030);
 
-        // White arrow with shadow, matching the title treatment.
         graphics.text(font, "←", left + 11, top + 11, 0xFFFFFFFF, true);
 
         String title = "ПРАВИЛА ИСПЫТАНИЯ";
@@ -92,9 +90,8 @@ public class RestrictionsScreen extends Screen {
                 "Попасть в Эндер край", "Блоки запрещены", (mask & 16) != 0);
 
         if ((mask & 16) != 0) {
-            graphics.text(font, "ЦЕЛЬ: УБИТЬ ЭНДЕР-ДРАКОНА",
-                    centeredX("ЦЕЛЬ: УБИТЬ ЭНДЕР-ДРАКОНА", left, PANEL_W),
-                    top + 270, 0xFFFFD83D, true);
+            String goal = "ЦЕЛЬ: УБИТЬ ЭНДЕР-ДРАКОНА";
+            graphics.text(font, goal, centeredX(goal, left, PANEL_W), top + 270, 0xFFFFD83D, true);
         }
     }
 
@@ -104,35 +101,43 @@ public class RestrictionsScreen extends Screen {
         final int rowH = 34;
         final int rowTop = y - 3;
 
-        // Subtle translucent row, not a bright solid plate.
         graphics.fill(x, rowTop, x + rowW, rowTop + rowH, 0x8A1D1D1D);
 
-        final int iconAreaW = 36;
-        final int triggerAreaW = 174;
-        final int arrowAreaW = 28;
-        final int restrictionAreaW = rowW - iconAreaW - triggerAreaW - arrowAreaW;
+        final int textY = rowTop + (rowH - font.lineHeight) / 2;
 
-        int iconX = x + (iconAreaW - 16) / 2;
-        int iconY = rowTop + (rowH - 16) / 2;
-        graphics.item(icon, iconX, iconY);
+        // Center the complete visual groups, not each element against unrelated fixed offsets.
+        final int leftZoneW = 206;
+        final int arrowZoneX = x + leftZoneW;
+        final int arrowZoneW = 28;
+        final int rightZoneX = arrowZoneX + arrowZoneW;
+        final int rightZoneW = rowW - leftZoneW - arrowZoneW;
 
-        int triggerX = x + iconAreaW;
-        int arrowX = triggerX + triggerAreaW;
-        int restrictionX = arrowX + arrowAreaW;
+        int triggerWidth = font.width(trigger);
+        int groupWidth = 16 + 8 + triggerWidth;
+        int groupStartX = x + Math.max(0, (leftZoneW - groupWidth) / 2);
 
-        int textY = rowTop + (rowH - font.lineHeight) / 2;
+        graphics.item(icon,
+                groupStartX,
+                rowTop + (rowH - 16) / 2);
 
         graphics.text(font, trigger,
-                centeredX(trigger, triggerX, triggerAreaW), textY, 0xFFFFFFFF, true);
+                groupStartX + 24,
+                textY,
+                0xFFFFFFFF,
+                true);
 
         graphics.text(font, "→",
-                centeredX("→", arrowX, arrowAreaW), textY, 0xFFB0B0B0, true);
+                centeredX("→", arrowZoneX, arrowZoneW),
+                textY,
+                0xFFB0B0B0,
+                true);
 
         graphics.text(font, restriction,
-                centeredX(restriction, restrictionX, restrictionAreaW),
-                textY, 0xFFFF6B6B, true);
+                centeredX(restriction, rightZoneX, rightZoneW),
+                textY,
+                0xFFFF6B6B,
+                true);
 
-        // Completed rule: strike through the whole rectangular rule block.
         if (completed) {
             int strikeY = rowTop + rowH / 2 - 1;
             graphics.fill(x + 2, strikeY, x + rowW - 2, strikeY + 2, 0xFFE13B3B);
