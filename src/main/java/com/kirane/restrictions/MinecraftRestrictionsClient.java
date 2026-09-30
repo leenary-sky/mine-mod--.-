@@ -79,7 +79,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
                 int inventoryLeft = (scaledWidth - 176) / 2;
                 int inventoryTop = (scaledHeight - 166) / 2;
                 int buttonWidth = 80;
-                int buttonX = inventoryLeft + 182;
+                int buttonX = inventoryLeft - buttonWidth - 6;
                 int buttonY = inventoryTop;
 
                 Screens.getWidgets(screen).add(
