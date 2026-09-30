@@ -38,7 +38,7 @@ public class RestrictionsScreen extends Screen {
         drawRule(graphics, left + 20, top + 103, new ItemStack(Items.DIAMOND),
                 "АЛМАЗЫ", "ЩИТ ЗАПРЕЩЁН");
         drawRule(graphics, left + 20, top + 144, new ItemStack(Items.NETHERRACK),
-                "НИЗШИЙ МИР", "БРОНЯ ЗАПРЕЩЕНА");
+                "Попасть в Незер", "БРОНЯ ЗАПРЕЩЕНА");
         drawRule(graphics, left + 20, top + 185, new ItemStack(Items.NETHER_BRICKS),
                 "АДСКАЯ КРЕПОСТЬ", "ЛУК ЗАПРЕЩЁН");
         drawRule(graphics, left + 20, top + 226, new ItemStack(Items.END_STONE),
