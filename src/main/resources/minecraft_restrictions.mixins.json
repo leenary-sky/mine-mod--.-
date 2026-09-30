@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.kirane.restrictions.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "BlockItemMixin"
+  ],
+  "client": [
+    "KeyMappingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
