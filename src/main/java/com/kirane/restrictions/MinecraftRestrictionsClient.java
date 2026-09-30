@@ -141,26 +141,27 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         String title = "ЗАДАНИЕ ВЫПОЛНЕНО";
         String subtitle = "НА ВАС НАЛОЖЕНО ОГРАНИЧЕНИЕ";
 
-        // Text is centered against the whole notification, not against the space left by an icon.
+        // Keep the central text block centered as one unit.
         int titleX = x + (width - font.width(title)) / 2;
         int subtitleX = x + (width - font.width(subtitle)) / 2;
 
         graphics.text(font, title, titleX, y + 26, 0xFFFFD83D, true);
         graphics.text(font, subtitle, subtitleX, y + 56, 0xFFFFFFFF, true);
 
-        // Mirrored icons: same size, same vertical center, equal distance from the card edges.
+        // Icons mirror the user's desired composition: same size, same height,
+        // symmetrically placed around the centered text block.
         final float scale = 1.75f;
-        final int iconBox = 28;
-        final int iconY = y + (height - Math.round(iconBox * scale)) / 2;
+        final int iconSize = Math.round(16 * scale);
+        final int iconY = y + (height - iconSize) / 2;
 
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x + 58, iconY);
+        graphics.pose().translate(x + 78, iconY);
         graphics.pose().scale(scale, scale);
         graphics.item(icon, 0, 0);
         graphics.pose().popMatrix();
 
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x + width - 58 - iconBox * scale, iconY);
+        graphics.pose().translate(x + width - 78 - iconSize, iconY);
         graphics.pose().scale(scale, scale);
         graphics.item(icon, 0, 0);
         graphics.pose().popMatrix();
@@ -176,10 +177,6 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             case 3 -> new ItemStack(Items.BOW);
             default -> new ItemStack(Items.BARRIER);
         };
-    }
-
-    private static int centeredX(net.minecraft.client.gui.Font font, String text, int areaX, int areaW) {
-        return areaX + Math.max(0, (areaW - font.width(text)) / 2);
     }
 
     private static void renderGoal(GuiGraphicsExtractor graphics, DeltaTracker delta) {
@@ -204,6 +201,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             }
 
             drawGoalBox(graphics, previousGoal, boxAlpha);
+
             float strikeProgress = Math.max(0.0f, Math.min(1.0f, elapsed / 1500.0f));
             drawStrike(graphics, previousGoal, boxAlpha, strikeProgress);
             return;
@@ -215,7 +213,6 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
     private static void drawGoalBox(GuiGraphicsExtractor graphics, String goal, int alpha) {
         var font = Minecraft.getInstance().font;
 
-        // Keep the original compact size and position: small yellow goal in the top-left.
         final int paddingX = 8;
         final int width = font.width(goal) + paddingX * 2;
         final int height = 22;
