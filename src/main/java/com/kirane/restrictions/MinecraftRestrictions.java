@@ -42,7 +42,7 @@ public class MinecraftRestrictions implements ModInitializer {
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayer player = handler.getPlayer();
-            ServerPlayNetworking.send(player, new RestrictionPayload(stageMask(player)));
+            ServerPlayNetworking.send(player, new RestrictionPayload(stageMask(player), 0));
         });
 
         UseItemCallback.EVENT.register((player, level, hand) -> {
@@ -114,7 +114,7 @@ public class MinecraftRestrictions implements ModInitializer {
 
     private static void activate(ServerPlayer player, String stage, int notificationStage) {
         setStage(player, stage);
-        ServerPlayNetworking.send(player, new RestrictionPayload(1 << notificationStage));
+        ServerPlayNetworking.send(player, new RestrictionPayload(stageMask(player), 1 << notificationStage));
     }
 
     private static int stageMask(ServerPlayer player) {
