@@ -30,12 +30,21 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             )
     );
 
+    private static final KeyMapping GOAL_VISIBILITY_KEY = KeyMappingHelper.registerKeyMapping(
+            new KeyMapping(
+                    "key.minecraft_restrictions.goal_visibility",
+                    InputConstants.KEY_P,
+                    KeyMapping.Category.register(Identifier.parse("minecraft_restrictions:controls"))
+            )
+    );
+
     private static int activeStages;
     private static int notificationStage;
     private static long notificationUntil;
 
     private static long goalTransitionUntil;
     private static String previousGoal;
+    private static boolean goalVisible = true;
 
     @Override
     public void onInitializeClient() {
@@ -49,7 +58,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
                 if (payload.notificationStage() != 0 && oldStages != activeStages) {
                     notificationUntil = System.currentTimeMillis() + 7000L;
                     previousGoal = goalForMask(oldStages);
-                    goalTransitionUntil = System.currentTimeMillis() + 1100L;
+                    goalTransitionUntil = System.currentTimeMillis() + 1800L;
 
                     if (context.client().player != null) {
                         context.client().player.playSound(
@@ -64,7 +73,6 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
 
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (screen instanceof InventoryScreen) {
-                // Vanilla inventory panel is 176x166. Put the rules button directly to its right.
                 int inventoryLeft = (scaledWidth - 176) / 2;
                 int inventoryTop = (scaledHeight - 166) / 2;
                 int buttonWidth = 80;
@@ -84,6 +92,10 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
                 if (client.player != null) {
                     client.gui.setScreen(new RestrictionsScreen());
                 }
+            }
+
+            while (GOAL_VISIBILITY_KEY.consumeClick()) {
+                goalVisible = !goalVisible;
             }
 
             if (client.player != null && (activeStages & 1) != 0) {
@@ -109,29 +121,39 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             return;
         }
 
-        int width = 420;
-        int height = 104;
-        int x = (graphics.guiWidth() - width) / 2;
-        int y = (graphics.guiHeight() - height) / 2;
+        final int width = 420;
+        final int height = 104;
+        final int x = (graphics.guiWidth() - width) / 2;
+        // Keep the restriction card clearly above the crosshair/center HUD.
+        final int y = (graphics.guiHeight() - height) / 2 - 58;
 
-        graphics.fill(x + 4, y + 4, x + width - 4, y + height - 4, 0xEC121212);
+        graphics.fill(x + 4, y + 4, x + width - 4, y + height - 4, 0xE7121212);
         graphics.fill(x, y, x + width, y + 4, 0xFFB0B0B0);
         graphics.fill(x, y + height - 4, x + width, y + height, 0xFF303030);
         graphics.fill(x, y, x + 4, y + height, 0xFFB0B0B0);
         graphics.fill(x + width - 4, y, x + width, y + height, 0xFF303030);
 
         ItemStack icon = notificationIcon(notificationStage);
-        graphics.item(icon, x + 24, y + 44);
-
         var font = Minecraft.getInstance().font;
         String title = "ЗАДАНИЕ ВЫПОЛНЕНО";
         String subtitle = "НА ВАС НАЛОЖЕНО ОГРАНИЧЕНИЕ";
 
-        int titleX = centeredX(font, title, x + 58, width - 82);
-        int subtitleX = centeredX(font, subtitle, x + 58, width - 82);
+        int textWidth = Math.max(font.width(title), font.width(subtitle));
+        int iconAreaWidth = 28;
+        int gap = 16;
+        int contentWidth = iconAreaWidth + gap + textWidth;
+        int contentStartX = x + (width - contentWidth) / 2;
 
-        graphics.text(font, title, titleX, y + 26, 0xFFFFD83D, true);
-        graphics.text(font, subtitle, subtitleX, y + 56, 0xFFFFFFFF, true);
+        // Scale the item to 175% and keep it close to the text.
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(contentStartX, y + 36);
+        graphics.pose().scale(1.75f, 1.75f);
+        graphics.item(icon, 0, 0);
+        graphics.pose().popMatrix();
+
+        int textX = contentStartX + iconAreaWidth + gap;
+        graphics.text(font, title, centeredX(font, title, textX, textWidth), y + 26, 0xFFFFD83D, true);
+        graphics.text(font, subtitle, centeredX(font, subtitle, textX, textWidth), y + 56, 0xFFFFFFFF, true);
     }
 
     private static ItemStack notificationIcon(int notificationStage) {
@@ -151,6 +173,10 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
     }
 
     private static void renderGoal(GuiGraphicsExtractor graphics, DeltaTracker delta) {
+        if (!goalVisible) {
+            return;
+        }
+
         String goal = goalForMask(activeStages);
         if (goal == null) {
             return;
@@ -160,17 +186,17 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
 
         if (goalTransitionUntil > now && previousGoal != null) {
             long remaining = goalTransitionUntil - now;
-            long elapsed = 1100L - remaining;
+            long elapsed = 1800L - remaining;
 
             int boxAlpha = 255;
-            if (elapsed > 700L) {
-                boxAlpha = Math.max(0, 255 - (int) (((elapsed - 700L) / 400.0f) * 255.0f));
+            if (elapsed > 1150L) {
+                boxAlpha = Math.max(0, 255 - (int) (((elapsed - 1150L) / 650.0f) * 255.0f));
             }
 
             drawGoalBox(graphics, previousGoal, boxAlpha);
 
-            // Visible strike-through animation: the red line grows across the entire box.
-            float strikeProgress = Math.max(0.0f, Math.min(1.0f, elapsed / 700.0f));
+            // Slow, highly visible strike-through animation.
+            float strikeProgress = Math.max(0.0f, Math.min(1.0f, elapsed / 1150.0f));
             drawStrike(graphics, previousGoal, boxAlpha, strikeProgress);
             return;
         }
@@ -181,34 +207,51 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
     private static void drawGoalBox(GuiGraphicsExtractor graphics, String goal, int alpha) {
         var font = Minecraft.getInstance().font;
 
-        int paddingX = 8;
-        int height = 22;
-        int width = font.width(goal) + paddingX * 2;
-        int x = 8;
-        int y = 8;
+        final int width = Math.max(220, font.width(goal) + 34);
+        final int height = 30;
+        final int x = 8;
+        final int y = 8;
 
         int backgroundAlpha = Math.max(0, Math.min(255, (alpha * 0x55) / 255));
         int bg = (backgroundAlpha << 24) | 0x111111;
-        int text = (alpha << 24) | 0xFFD83D;
-
         graphics.fill(x, y, x + width, y + height, bg);
 
+        int baseTextWidth = font.width(goal);
+        int centeredTextX = x + (width - baseTextWidth) / 2;
         int textY = y + (height - font.lineHeight) / 2;
-        graphics.text(font, goal, x + paddingX, textY, text, true);
+
+        // Slightly larger task text while keeping it exactly centered in the box.
+        graphics.pose().pushMatrix();
+        float scale = 1.25f;
+        float centerX = x + width / 2.0f;
+        float centerY = y + height / 2.0f;
+        graphics.pose().translate(centerX, centerY);
+        graphics.pose().scale(scale, scale);
+        graphics.pose().translate(-centerX, -centerY);
+        graphics.text(font, goal, centeredTextX, textY, (alpha << 24) | 0xFFD83D, true);
+        graphics.pose().popMatrix();
     }
 
     private static void drawStrike(GuiGraphicsExtractor graphics, String goal, int alpha, float progress) {
         var font = Minecraft.getInstance().font;
 
-        int x = 8;
-        int y = 8;
-        int textWidth = font.width(goal);
+        final int width = Math.max(220, font.width(goal) + 34);
+        final int height = 30;
+        final int x = 8;
+        final int y = 8;
 
         int redAlpha = Math.max(0, Math.min(255, alpha));
         int red = (redAlpha << 24) | 0xE13B3B;
 
-        int lineWidth = Math.max(0, Math.round(textWidth + 8) * 0 + Math.round((textWidth + 2 * 8) * progress));
-        graphics.fill(x, y + 10, x + lineWidth, y + 12, red);
+        int textWidth = font.width(goal);
+        int textLeft = x + (width - textWidth) / 2;
+
+        // Slightly thicker and longer than before so the completion is unmistakable.
+        int strikeWidth = Math.round((textWidth + 16) * progress);
+        int strikeX = textLeft - 8;
+
+        graphics.fill(strikeX, y + height / 2 - 1, strikeX + strikeWidth,
+                y + height / 2 + 2, red);
     }
 
     private static String goalForMask(int mask) {
