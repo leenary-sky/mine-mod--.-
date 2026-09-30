@@ -2,11 +2,11 @@ package com.kirane.restrictions;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
-import net.fabricmc.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.api.event.player.UseItemCallback;
-import net.fabricmc.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
