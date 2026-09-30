@@ -88,7 +88,7 @@ public class RestrictionsScreen extends Screen {
         drawRule(graphics, left + 20, top + 228, new ItemStack(Items.END_STONE),
                 "Попасть в Эндер край", "Блоки запрещены", (mask & 16) != 0);
 
-        if ((mask & 16) != 0) {
+        if ((mask & 16) != 0 && (mask & 32) == 0) {
             String goal = "ЦЕЛЬ: УБИТЬ ЭНДЕР-ДРАКОНА";
             graphics.text(font, goal, centeredX(goal, left, PANEL_W), top + 270, 0xFFFFD83D, true);
         }
