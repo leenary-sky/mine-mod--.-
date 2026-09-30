@@ -1,35 +1,45 @@
 # Minecraft Restrictions
 
-Fabric mod for Minecraft Java 26.3.
+[🇷🇺 Русский](README.ru.md) | [🇬🇧 English](README.md)
 
-Challenge progression:
+**Minecraft Java 26.3 · Fabric**
 
-1. Get iron -> sprinting is disabled.
-2. Get diamonds -> shield use is disabled.
-3. Enter the Nether -> armor is disabled.
-4. Reach a Nether Fortress -> bow use is disabled.
-5. Enter the End -> placing blocks is disabled.
-6. Kill the Ender Dragon.
+A challenge mod that turns the video's rules into gameplay restrictions. Once a trigger activates, its restriction is **permanent for that player in that world**. Leaving the world, restarting the game, or dying does not reset it.
 
-Implementation notes:
+## Challenge rules
 
-- Progress is stored using persistent player scoreboard tags, so restrictions survive reconnects and restarts.
-- Armor is automatically removed once the Nether restriction activates.
-- The fortress trigger detects fortress-specific Nether Brick blocks around the player.
-- Block restriction means placing blocks, not breaking them.
-- Current restrictions are shown in the action-bar overlay.
-- Every new restriction produces a visible notification.
+1. **Obtain an iron ingot** → sprinting is forbidden.
+2. **Obtain a diamond** → shields are forbidden.
+3. **Enter the Nether for the first time** → armor is forbidden.
+4. **Discover a Nether Fortress** → bows are forbidden.
+5. **Enter the End for the first time** → placing blocks is forbidden.
+6. Goal: defeat the Ender Dragon.
 
-Development target:
+## Visual feedback
 
-- Minecraft 26.3
-- Fabric Loader 0.19.5
-- Fabric API 0.160.0+26.3
-- Java 25
-- Fabric Loom 1.17.x
+- Russian notifications when each restriction activates.
+- Active restrictions are shown in the action bar.
+- Armor is removed when the armor restriction activates.
 
-Open the repository as a Gradle project in IntelliJ IDEA or VS Code. Fabric recommends IntelliJ IDEA for mod development.
+## Important details
 
-The project targets stable 26.3 rather than the 26.4 snapshot branch.
+- Iron and diamond triggers activate when the item is in the inventory; smelting iron or mining a diamond with a particular tool is not required.
+- Fortress detection looks for characteristic Nether Brick blocks near the player. This is a practical recording-friendly trigger, but player-built blocks could also trigger it.
+- “No blocks” means no **placing** blocks; breaking blocks remains allowed.
+- Progress is stored in persistent player scoreboard tags.
 
-The built JAR is produced in build/libs/.
+## Build
+
+Java 25 and Gradle are required. From the project root, run:
+
+```bash
+./gradlew build
+```
+
+On Windows:
+
+```bat
+gradlew.bat build
+```
+
+The JAR will be created in `build/libs/`. Install Fabric Loader for Minecraft 26.3 and a compatible Fabric API version to run it.
