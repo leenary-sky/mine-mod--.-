@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -45,7 +46,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             if (screen instanceof InventoryScreen) {
                 int buttonX = scaledWidth / 2 + 48;
                 int buttonY = scaledHeight / 2 - 82;
-                screen.addRenderableWidget(
+                Screens.getWidgets(screen).add(
                         Button.builder(net.minecraft.network.chat.Component.literal("Правила"), button -> {
                             client.gui.setScreen(new RestrictionsScreen());
                         }).bounds(buttonX, buttonY, 70, 20).build()
