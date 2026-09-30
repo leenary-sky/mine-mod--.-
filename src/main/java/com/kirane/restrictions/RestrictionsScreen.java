@@ -37,7 +37,7 @@ public class RestrictionsScreen extends Screen {
                 "ЖЕЛЕЗО", "СПРИНТ ЗАПРЕЩЁН");
         drawRule(graphics, left + 20, top + 103, new ItemStack(Items.DIAMOND),
                 "АЛМАЗЫ", "ЩИТ ЗАПРЕЩЁН");
-        drawRule(graphics, left + 20, top + 144, new ItemStack(Items.NETHER_PORTAL),
+        drawRule(graphics, left + 20, top + 144, new ItemStack(Items.NETHERRACK),
                 "НИЗШИЙ МИР", "БРОНЯ ЗАПРЕЩЕНА");
         drawRule(graphics, left + 20, top + 185, new ItemStack(Items.NETHER_BRICKS),
                 "АДСКАЯ КРЕПОСТЬ", "ЛУК ЗАПРЕЩЁН");
