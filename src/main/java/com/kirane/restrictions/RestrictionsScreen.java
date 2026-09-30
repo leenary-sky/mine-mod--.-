@@ -1,8 +1,8 @@
 package com.kirane.restrictions;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -23,6 +23,19 @@ public class RestrictionsScreen extends Screen {
     }
 
     @Override
+    protected void init() {
+        int left = (width - PANEL_W) / 2;
+        int top = (height - PANEL_H) / 2;
+
+        // Use a real Minecraft button so the back arrow keeps working.
+        addRenderableWidget(
+                Button.builder(Component.literal("←"), button -> goBack())
+                        .bounds(left + 8, top + 8, 28, 20)
+                        .build()
+        );
+    }
+
+    @Override
     public void onClose() {
         goBack();
     }
@@ -40,21 +53,6 @@ public class RestrictionsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        int left = (width - PANEL_W) / 2;
-        int top = (height - PANEL_H) / 2;
-
-        if (event.button() == 0
-                && event.x() >= left + 8 && event.x() <= left + 34
-                && event.y() >= top + 8 && event.y() <= top + 34) {
-            goBack();
-            return true;
-        }
-
-        return super.mouseClicked(event, doubleClick);
-    }
-
-    @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         int left = (width - PANEL_W) / 2;
         int top = (height - PANEL_H) / 2;
@@ -67,8 +65,6 @@ public class RestrictionsScreen extends Screen {
         graphics.fill(left, top + PANEL_H - 4, left + PANEL_W, top + PANEL_H, 0xFF303030);
         graphics.fill(left, top, left + 4, top + PANEL_H, 0xFFB0B0B0);
         graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF303030);
-
-        graphics.text(font, "←", left + 11, top + 11, 0xFFFFFFFF, true);
 
         String title = "ПРАВИЛА ИСПЫТАНИЯ";
         String subtitle = "Каждое усиление забирает одну возможность.";
@@ -105,7 +101,6 @@ public class RestrictionsScreen extends Screen {
 
         final int textY = rowTop + (rowH - font.lineHeight) / 2;
 
-        // Center the complete visual groups, not each element against unrelated fixed offsets.
         final int leftZoneW = 206;
         final int arrowZoneX = x + leftZoneW;
         final int arrowZoneW = 28;
