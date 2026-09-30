@@ -62,18 +62,23 @@ public class RestrictionsScreen extends Screen {
 
         graphics.fill(0, 0, width, height, 0x99000000);
 
+        // Extremely dark interior; the border is intentionally lighter.
         graphics.fill(left + 4, top + 4, left + PANEL_W - 4, top + PANEL_H - 4, 0xFF121212);
         graphics.fill(left, top, left + PANEL_W, top + 4, 0xFFB0B0B0);
         graphics.fill(left, top + PANEL_H - 4, left + PANEL_W, top + PANEL_H, 0xFF303030);
         graphics.fill(left, top, left + 4, top + PANEL_H, 0xFFB0B0B0);
         graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF303030);
 
+        // White arrow with shadow, matching the title treatment.
         graphics.text(font, "←", left + 11, top + 11, 0xFFFFFFFF, true);
 
-        graphics.text(font, "ПРАВИЛА ИСПЫТАНИЯ",
-                left + 44, top + 16, 0xFFFFFFFF, true);
-        graphics.text(font, "Каждое усиление забирает одну возможность.",
-                left + 20, top + 40, 0xFF808080, false);
+        String title = "ПРАВИЛА ИСПЫТАНИЯ";
+        String subtitle = "Каждое усиление забирает одну возможность.";
+
+        graphics.text(font, title,
+                centeredX(title, left, PANEL_W), top + 16, 0xFFFFFFFF, true);
+        graphics.text(font, subtitle,
+                centeredX(subtitle, left, PANEL_W), top + 40, 0xFF808080, false);
 
         drawRule(graphics, left + 20, top + 68, new ItemStack(Items.IRON_INGOT),
                 "Добыть железо", "Спринт запрещён", (mask & 1) != 0);
@@ -88,7 +93,8 @@ public class RestrictionsScreen extends Screen {
 
         if ((mask & 16) != 0) {
             graphics.text(font, "ЦЕЛЬ: УБИТЬ ЭНДЕР-ДРАКОНА",
-                    left + 20, top + 270, 0xFFFFD83D, true);
+                    centeredX("ЦЕЛЬ: УБИТЬ ЭНДЕР-ДРАКОНА", left, PANEL_W),
+                    top + 270, 0xFFFFD83D, true);
         }
     }
 
@@ -96,29 +102,40 @@ public class RestrictionsScreen extends Screen {
                           String trigger, String restriction, boolean completed) {
         final int rowW = PANEL_W - 40;
         final int rowH = 34;
+        final int rowTop = y - 3;
 
-        graphics.fill(x, y - 3, x + rowW, y + rowH - 3, 0xAA1D1D1D);
-        graphics.item(icon, x + 6, y + 6);
+        // Subtle translucent row, not a bright solid plate.
+        graphics.fill(x, rowTop, x + rowW, rowTop + rowH, 0x8A1D1D1D);
 
-        int textY = y + (rowH - font.lineHeight) / 2 - 3;
+        final int iconAreaW = 36;
+        final int triggerAreaW = 174;
+        final int arrowAreaW = 28;
+        final int restrictionAreaW = rowW - iconAreaW - triggerAreaW - arrowAreaW;
 
-        int triggerAreaX = x + 28;
-        int triggerAreaW = 180;
-        int arrowX = x + 210;
-        int restrictionAreaX = x + 224;
-        int restrictionAreaW = rowW - 224;
+        int iconX = x + (iconAreaW - 16) / 2;
+        int iconY = rowTop + (rowH - 16) / 2;
+        graphics.item(icon, iconX, iconY);
 
-        int triggerTextX = centeredX(trigger, triggerAreaX, triggerAreaW);
-        int restrictionTextX = centeredX(restriction, restrictionAreaX, restrictionAreaW);
+        int triggerX = x + iconAreaW;
+        int arrowX = triggerX + triggerAreaW;
+        int restrictionX = arrowX + arrowAreaW;
 
-        graphics.text(font, trigger, triggerTextX, textY, 0xFFFFFFFF, true);
-        graphics.text(font, "→", arrowX, textY, 0xFFB0B0B0, true);
-        graphics.text(font, restriction, restrictionTextX, textY, 0xFFFF6B6B, true);
+        int textY = rowTop + (rowH - font.lineHeight) / 2;
 
+        graphics.text(font, trigger,
+                centeredX(trigger, triggerX, triggerAreaW), textY, 0xFFFFFFFF, true);
+
+        graphics.text(font, "→",
+                centeredX("→", arrowX, arrowAreaW), textY, 0xFFB0B0B0, true);
+
+        graphics.text(font, restriction,
+                centeredX(restriction, restrictionX, restrictionAreaW),
+                textY, 0xFFFF6B6B, true);
+
+        // Completed rule: strike through the whole rectangular rule block.
         if (completed) {
-            int strikeY = textY + font.lineHeight / 2;
-            graphics.fill(triggerTextX - 1, strikeY, triggerTextX + font.width(trigger) + 1, strikeY + 2,
-                    0xFFE13B3B);
+            int strikeY = rowTop + rowH / 2 - 1;
+            graphics.fill(x + 2, strikeY, x + rowW - 2, strikeY + 2, 0xFFE13B3B);
         }
     }
 
