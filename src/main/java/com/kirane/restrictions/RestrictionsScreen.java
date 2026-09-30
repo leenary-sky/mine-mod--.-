@@ -1,7 +1,6 @@
 package com.kirane.restrictions;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -10,6 +9,7 @@ import net.minecraft.world.item.Items;
 public class RestrictionsScreen extends Screen {
     private static final int PANEL_W = 430;
     private static final int PANEL_H = 300;
+
     private final Screen parent;
 
     public RestrictionsScreen() {
@@ -19,18 +19,6 @@ public class RestrictionsScreen extends Screen {
     public RestrictionsScreen(Screen parent) {
         super(Component.literal("Правила испытания"));
         this.parent = parent;
-    }
-
-    @Override
-    protected void init() {
-        int left = (width - PANEL_W) / 2;
-        int top = (height - PANEL_H) / 2;
-
-        addRenderableWidget(
-                Button.builder(Component.literal("←"), button -> goBack())
-                        .bounds(left + 10, top + 10, 24, 20)
-                        .build()
-        );
     }
 
     @Override
@@ -51,24 +39,42 @@ public class RestrictionsScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        super.extractRenderState(graphics, mouseX, mouseY, delta);
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int left = (width - PANEL_W) / 2;
+        int top = (height - PANEL_H) / 2;
 
+        if (button == 0
+                && mouseX >= left + 8 && mouseX <= left + 34
+                && mouseY >= top + 8 && mouseY <= top + 34) {
+            goBack();
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         int left = (width - PANEL_W) / 2;
         int top = (height - PANEL_H) / 2;
         int mask = MinecraftRestrictionsClientState.mask();
 
         graphics.fill(0, 0, width, height, 0x99000000);
 
-        graphics.fill(left + 4, top + 4, left + PANEL_W - 4, top + PANEL_H - 4, 0xFF1A1A1A);
-        graphics.fill(left, top, left + PANEL_W, top + 4, 0xFF8A8A8A);
-        graphics.fill(left, top + PANEL_H - 4, left + PANEL_W, top + PANEL_H, 0xFF202020);
-        graphics.fill(left, top, left + 4, top + PANEL_H, 0xFF8A8A8A);
-        graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF202020);
+        // Minecraft-style frame: light top/left, dark bottom/right, very dark panel inside.
+        graphics.fill(left + 4, top + 4, left + PANEL_W - 4, top + PANEL_H - 4, 0xFF121212);
+        graphics.fill(left, top, left + PANEL_W, top + 4, 0xFFB0B0B0);
+        graphics.fill(left, top + PANEL_H - 4, left + PANEL_W, top + PANEL_H, 0xFF303030);
+        graphics.fill(left, top, left + 4, top + PANEL_H, 0xFFB0B0B0);
+        graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF303030);
 
-        graphics.text(font, "ПРАВИЛА ИСПЫТАНИЯ", left + 44, top + 16, 0xFFFFFFFF, true);
+        // Back arrow: the same bright white/shadowed treatment as the title.
+        graphics.text(font, "←", left + 11, top + 11, 0xFFFFFFFF, true);
+
+        graphics.text(font, "ПРАВИЛА ИСПЫТАНИЯ",
+                left + 44, top + 16, 0xFFFFFFFF, true);
         graphics.text(font, "Каждое усиление забирает одну возможность.",
-                left + 20, top + 40, 0xFFAAAAAA, false);
+                left + 20, top + 40, 0xFF808080, false);
 
         drawRule(graphics, left + 20, top + 68, new ItemStack(Items.IRON_INGOT),
                 "Добыть железо", "Спринт запрещён", (mask & 1) != 0);
@@ -89,18 +95,36 @@ public class RestrictionsScreen extends Screen {
 
     private void drawRule(GuiGraphicsExtractor graphics, int x, int y, ItemStack icon,
                           String trigger, String restriction, boolean completed) {
-        graphics.fill(x, y - 3, x + PANEL_W - 40, y + 31, 0xFF242424);
-        graphics.item(icon, x + 7, y + 1);
+        final int rowW = PANEL_W - 40;
+        final int rowH = 34;
 
-        int triggerX = x + 34;
-        graphics.text(font, trigger, triggerX, y + 3, 0xFFFFFFFF, true);
-        graphics.text(font, "→", x + 188, y + 3, 0xFFB0B0B0, true);
-        graphics.text(font, restriction, x + 216, y + 3, 0xFFFF6B6B, true);
+        graphics.fill(x, y - 3, x + rowW, y + rowH - 3, 0xAA1D1D1D);
+
+        graphics.item(icon, x + 6, y + 6);
+
+        int textY = y + (rowH - font.lineHeight) / 2 - 3;
+
+        int triggerAreaX = x + 28;
+        int triggerAreaW = 180;
+        int arrowX = x + 210;
+        int restrictionAreaX = x + 224;
+        int restrictionAreaW = rowW - 224;
+
+        int triggerTextX = centeredX(trigger, triggerAreaX, triggerAreaW);
+        int restrictionTextX = centeredX(restriction, restrictionAreaX, restrictionAreaW);
+
+        graphics.text(font, trigger, triggerTextX, textY, 0xFFFFFFFF, true);
+        graphics.text(font, "→", arrowX, textY, 0xFFB0B0B0, true);
+        graphics.text(font, restriction, restrictionTextX, textY, 0xFFFF6B6B, true);
 
         if (completed) {
-            int strikeStart = triggerX;
-            int strikeEnd = triggerX + font.width(trigger);
-            graphics.fill(strikeStart, y + 12, strikeEnd, y + 14, 0xFFE13B3B);
+            int strikeY = textY + font.lineHeight / 2;
+            graphics.fill(triggerTextX - 1, strikeY, triggerTextX + font.width(trigger) + 1, strikeY + 2,
+                    0xFFE13B3B);
         }
+    }
+
+    private int centeredX(String text, int areaX, int areaW) {
+        return areaX + Math.max(0, (areaW - font.width(text)) / 2);
     }
 }
