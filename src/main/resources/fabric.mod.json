@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "minecraft_restrictions",
+  "version": "${version}",
+  "name": "Minecraft Restrictions",
+  "description": "A progression-based challenge mod: every power-up removes one ability.",
+  "authors": ["Kirane"],
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.kirane.restrictions.MinecraftRestrictions"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "26.3.x",
+    "fabric-api": ">=0.160.0+26.3"
+  }
+}
