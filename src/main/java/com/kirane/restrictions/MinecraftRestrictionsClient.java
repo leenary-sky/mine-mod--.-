@@ -62,7 +62,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
                 int buttonY = scaledHeight / 2 - 96;
                 Screens.getWidgets(screen).add(
                         Button.builder(Component.literal("Правила"), button -> {
-                            client.gui.setScreen(new RestrictionsScreen());
+                            client.gui.setScreen(new RestrictionsScreen(screen));
                         }).bounds(buttonX, buttonY, 70, 20).build()
                 );
             }
