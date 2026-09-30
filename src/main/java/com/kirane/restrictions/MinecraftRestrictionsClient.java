@@ -7,10 +7,13 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -36,6 +39,18 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
                 notificationStage = payload.notificationStage();
                 notificationUntil = System.currentTimeMillis() + 3500L;
             });
+        });
+
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+            if (screen instanceof InventoryScreen) {
+                int buttonX = scaledWidth / 2 + 48;
+                int buttonY = scaledHeight / 2 - 82;
+                screen.addRenderableWidget(
+                        Button.builder(net.minecraft.network.chat.Component.literal("Правила"), button -> {
+                            client.gui.setScreen(new RestrictionsScreen());
+                        }).bounds(buttonX, buttonY, 70, 20).build()
+                );
+            }
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
