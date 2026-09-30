@@ -1,8 +1,8 @@
 package com.kirane.restrictions;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -23,6 +23,19 @@ public class RestrictionsScreen extends Screen {
     }
 
     @Override
+    protected void init() {
+        int left = (width - PANEL_W) / 2;
+        int top = (height - PANEL_H) / 2;
+
+        // Tiny invisible vanilla button: clickable, but without a large hover plate.
+        Button backButton = Button.builder(Component.empty(), button -> goBack())
+                .bounds(left + 10, top + 10, 18, 14)
+                .build();
+        backButton.setAlpha(0.0F);
+        addRenderableWidget(backButton);
+    }
+
+    @Override
     public void onClose() {
         goBack();
     }
@@ -40,23 +53,6 @@ public class RestrictionsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (isBackHovered(event.x(), event.y()) && event.button() == 0) {
-            goBack();
-            return true;
-        }
-
-        return super.mouseClicked(event, doubleClick);
-    }
-
-    private boolean isBackHovered(double mouseX, double mouseY) {
-        int left = (width - PANEL_W) / 2;
-        int top = (height - PANEL_H) / 2;
-        return mouseX >= left + 6 && mouseX <= left + 42
-                && mouseY >= top + 6 && mouseY <= top + 34;
-    }
-
-    @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         int left = (width - PANEL_W) / 2;
         int top = (height - PANEL_H) / 2;
@@ -70,12 +66,8 @@ public class RestrictionsScreen extends Screen {
         graphics.fill(left, top, left + 4, top + PANEL_H, 0xFFB0B0B0);
         graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF303030);
 
-        // Large hit area with a subtle hover plate; the arrow itself stays white with a shadow.
-        if (isBackHovered(mouseX, mouseY)) {
-            graphics.fill(left + 6, top + 6, left + 42, top + 34, 0x44202020);
-        }
-        graphics.text(font, "←", left + 12, top + 10, 0xFF202020, false);
-        graphics.text(font, "←", left + 11, top + 9, 0xFFFFFFFF, true);
+        graphics.text(font, "←", left + 11, top + 9, 0xFF202020, false);
+        graphics.text(font, "←", left + 10, top + 8, 0xFFFFFFFF, true);
 
         String title = "ПРАВИЛА ИСПЫТАНИЯ";
         String subtitle = "Каждое усиление забирает одну возможность.";
