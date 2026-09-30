@@ -249,6 +249,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         if ((mask & 4) == 0) return "Попасть в Незер";
         if ((mask & 8) == 0) return "Попасть в адскую крепость";
         if ((mask & 16) == 0) return "Попасть в Эндер край";
-        return "Убить ЭНДЕР-ДРАКОНА";
+        if ((mask & 32) == 0) return "Убить ЭНДЕР-ДРАКОНА";
+        return null;
     }
 }
