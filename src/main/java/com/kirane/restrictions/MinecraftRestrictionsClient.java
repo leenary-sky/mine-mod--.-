@@ -61,7 +61,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
                 if (payload.notificationStage() != 0 && oldStages != activeStages) {
                     notificationUntil = System.currentTimeMillis() + 7000L;
                     previousGoal = goalForMask(oldStages);
-                    goalTransitionUntil = System.currentTimeMillis() + 1800L;
+                    goalTransitionUntil = System.currentTimeMillis() + 2600L;
 
                     if (context.client().player != null) {
                         context.client().player.playSound(
@@ -124,7 +124,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             return;
         }
 
-        final int width = 420;
+        final int width = 390;
         final int height = 104;
         final int x = (graphics.guiWidth() - width) / 2;
         final int y = (graphics.guiHeight() - height) / 2 - 58;
@@ -142,7 +142,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
 
         int textWidth = Math.max(font.width(title), font.width(subtitle));
         int iconAreaWidth = 28;
-        int gap = 16;
+        int gap = 6;
         int contentWidth = iconAreaWidth + gap + textWidth;
         int contentStartX = x + (width - contentWidth) / 2;
 
@@ -187,15 +187,15 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
 
         if (goalTransitionUntil > now && previousGoal != null) {
             long remaining = goalTransitionUntil - now;
-            long elapsed = 1800L - remaining;
+            long elapsed = 2600L - remaining;
 
             int boxAlpha = 255;
-            if (elapsed > 1150L) {
-                boxAlpha = Math.max(0, 255 - (int) (((elapsed - 1150L) / 650.0f) * 255.0f));
+            if (elapsed > 1500L) {
+                boxAlpha = Math.max(0, 255 - (int) (((elapsed - 1500L) / 1100.0f) * 255.0f));
             }
 
             drawGoalBox(graphics, previousGoal, boxAlpha);
-            float strikeProgress = Math.max(0.0f, Math.min(1.0f, elapsed / 1150.0f));
+            float strikeProgress = Math.max(0.0f, Math.min(1.0f, elapsed / 1500.0f));
             drawStrike(graphics, previousGoal, boxAlpha, strikeProgress);
             return;
         }
