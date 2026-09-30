@@ -43,6 +43,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
             context.client().execute(() -> {
                 int oldStages = activeStages;
                 activeStages = payload.mask();
+                MinecraftRestrictionsClientState.setMask(activeStages);
                 notificationStage = payload.notificationStage();
 
                 if (payload.notificationStage() != 0 && oldStages != activeStages) {
