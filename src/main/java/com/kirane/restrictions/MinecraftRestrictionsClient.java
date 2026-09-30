@@ -15,8 +15,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -33,7 +34,6 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
     private static int notificationStage;
     private static long notificationUntil;
 
-    private static int previousStages;
     private static long goalTransitionUntil;
     private static String previousGoal;
 
@@ -48,22 +48,30 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
 
                 if (payload.notificationStage() != 0 && oldStages != activeStages) {
                     notificationUntil = System.currentTimeMillis() + 7000L;
-                    previousStages = oldStages;
                     previousGoal = goalForMask(oldStages);
-                    goalTransitionUntil = System.currentTimeMillis() + 900L;
+                    goalTransitionUntil = System.currentTimeMillis() + 1100L;
+
+                    if (context.client().player != null) {
+                        context.client().player.playSound(
+                                SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
+                                1.0F,
+                                1.0F
+                        );
+                    }
                 }
             });
         });
 
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (screen instanceof InventoryScreen) {
-                // Small button above the inventory, away from slots and crafting controls.
-                int buttonX = scaledWidth / 2 + 48;
-                int buttonY = scaledHeight / 2 - 96;
+                int buttonWidth = 80;
+                int buttonX = scaledWidth / 2 - buttonWidth / 2;
+                int buttonY = scaledHeight / 2 - 114;
+
                 Screens.getWidgets(screen).add(
                         Button.builder(Component.literal("Правила"), button -> {
                             client.gui.setScreen(new RestrictionsScreen(screen));
-                        }).bounds(buttonX, buttonY, 70, 20).build()
+                        }).bounds(buttonX, buttonY, buttonWidth, 20).build()
                 );
             }
         });
@@ -77,7 +85,15 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
 
             if (client.player != null && (activeStages & 1) != 0) {
                 client.player.setSprinting(false);
-                client.options.keySprint.setDown(false);
+
+                // Remove any predicted shield/bow use that may have started just before a new stage arrived.
+                if (isRestrictedUseItem(client.player.getMainHandItem())
+                        || isRestrictedUseItem(client.player.getOffhandItem())) {
+                    if (client.player.isUsingItem()
+                            && isRestrictedUseItem(client.player.getUseItem())) {
+                        client.player.stopUsingItem();
+                    }
+                }
             }
         });
 
@@ -94,62 +110,55 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         );
     }
 
+    private static boolean isRestrictedUseItem(ItemStack stack) {
+        return ((activeStages & 2) != 0 && stack.is(Items.SHIELD))
+                || ((activeStages & 8) != 0 && stack.is(Items.BOW));
+    }
+
     private static void renderNotification(GuiGraphicsExtractor graphics, DeltaTracker delta) {
         if (notificationStage == 0 || System.currentTimeMillis() >= notificationUntil) {
             return;
         }
 
-        int stage = Integer.numberOfTrailingZeros(notificationStage);
-        String trigger;
-        String restriction;
-        ItemStack icon;
-
-        switch (stage) {
-            case 0 -> {
-                trigger = "ЖЕЛЕЗО";
-                restriction = "СПРИНТ ЗАПРЕЩЁН";
-                icon = new ItemStack(Items.IRON_INGOT);
-            }
-            case 1 -> {
-                trigger = "АЛМАЗЫ";
-                restriction = "ЩИТ ЗАПРЕЩЁН";
-                icon = new ItemStack(Items.SHIELD);
-            }
-            case 2 -> {
-                trigger = "НЕЗЕР";
-                restriction = "БРОНЯ ЗАПРЕЩЕНА";
-                icon = new ItemStack(Items.IRON_CHESTPLATE);
-            }
-            case 3 -> {
-                trigger = "АДСКАЯ КРЕПОСТЬ";
-                restriction = "ЛУК ЗАПРЕЩЁН";
-                icon = new ItemStack(Items.BOW);
-            }
-            default -> {
-                trigger = "ЭНДЕР КРАЙ";
-                restriction = "БЛОКИ ЗАПРЕЩЕНЫ";
-                icon = new ItemStack(Items.BARRIER);
-            }
-        }
-
-        int width = 330;
-        int height = 90;
+        int width = 370;
+        int height = 96;
         int x = (graphics.guiWidth() - width) / 2;
         int y = (graphics.guiHeight() - height) / 2;
 
-        graphics.fill(x + 4, y + 4, x + width - 4, y + height - 4, 0xE5101010);
-        graphics.fill(x, y, x + width, y + 4, 0xFF8A8A8A);
-        graphics.fill(x, y + height - 4, x + width, y + height, 0xFF202020);
-        graphics.fill(x, y, x + 4, y + height, 0xFF8A8A8A);
-        graphics.fill(x + width - 4, y, x + width, y + height, 0xFF202020);
+        graphics.fill(x + 4, y + 4, x + width - 4, y + height - 4, 0xEC121212);
+        graphics.fill(x, y, x + width, y + 4, 0xFFB0B0B0);
+        graphics.fill(x, y + height - 4, x + width, y + height, 0xFF303030);
+        graphics.fill(x, y, x + 4, y + height, 0xFFB0B0B0);
+        graphics.fill(x + width - 4, y, x + width, y + height, 0xFF303030);
 
-        graphics.item(icon, x + 20, y + 25);
-        graphics.text(Minecraft.getInstance().font, "ОГРАНИЧЕНИЕ АКТИВИРОВАНО",
-                x + 58, y + 18, 0xFFFFD83D, true);
-        graphics.text(Minecraft.getInstance().font, trigger + "  →  " + restriction,
-                x + 58, y + 44, 0xFFFFFFFF, true);
-        graphics.text(Minecraft.getInstance().font, "J — открыть правила",
-                x + 58, y + 65, 0xFFAAAAAA, false);
+        ItemStack icon = notificationIcon(notificationStage);
+        graphics.item(icon, x + 22, y + 40);
+
+        var font = Minecraft.getInstance().font;
+        String title = "ЗАДАНИЕ ВЫПОЛНЕНО";
+        String subtitle = "НА ВАС НАЛОЖЕНО ОГРАНИЧЕНИЕ";
+
+        int titleX = centeredX(font, title, x + 58, width - 72);
+        int subtitleX = centeredX(font, subtitle, x + 40, width - 80);
+
+        graphics.text(font, title, titleX, y + 23, 0xFFFFD83D, true);
+        graphics.text(font, subtitle, subtitleX, y + 51, 0xFFFFFFFF, true);
+    }
+
+    private static ItemStack notificationIcon(int notificationStage) {
+        int stage = Integer.numberOfTrailingZeros(notificationStage);
+
+        return switch (stage) {
+            case 0 -> new ItemStack(Items.IRON_INGOT);
+            case 1 -> new ItemStack(Items.SHIELD);
+            case 2 -> new ItemStack(Items.IRON_CHESTPLATE);
+            case 3 -> new ItemStack(Items.BOW);
+            default -> new ItemStack(Items.BARRIER);
+        };
+    }
+
+    private static int centeredX(net.minecraft.client.gui.Font font, String text, int areaX, int areaW) {
+        return areaX + Math.max(0, (areaW - font.width(text)) / 2);
     }
 
     private static void renderGoal(GuiGraphicsExtractor graphics, DeltaTracker delta) {
@@ -161,7 +170,7 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         long now = System.currentTimeMillis();
 
         if (goalTransitionUntil > now && previousGoal != null) {
-            float progress = (goalTransitionUntil - now) / 900.0f;
+            float progress = (goalTransitionUntil - now) / 1100.0f;
             int alpha = Math.max(0, Math.min(255, (int) (progress * 255)));
             drawGoalBox(graphics, previousGoal, alpha);
             drawStrike(graphics, previousGoal, alpha);
@@ -175,17 +184,19 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         var font = Minecraft.getInstance().font;
 
         int paddingX = 8;
-        int paddingY = 5;
-        int width = font.width(goal) + paddingX * 2;
         int height = 22;
+        int width = font.width(goal) + paddingX * 2;
         int x = 8;
         int y = 8;
 
-        int bg = (alpha << 24) | 0x555555;
-        int text = (alpha << 24) | 0xFFFFFF;
+        int backgroundAlpha = Math.max(0, Math.min(255, (alpha * 0x82) / 255));
+        int bg = (backgroundAlpha << 24) | 0x222222;
+        int text = (alpha << 24) | 0xFFD83D;
 
         graphics.fill(x, y, x + width, y + height, bg);
-        graphics.text(font, goal, x + paddingX, y + paddingY, text, false);
+
+        int textY = y + (height - font.lineHeight) / 2;
+        graphics.text(font, goal, x + paddingX, textY, text, false);
     }
 
     private static void drawStrike(GuiGraphicsExtractor graphics, String goal, int alpha) {
@@ -194,9 +205,11 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         int x = 8;
         int y = 8;
         int textWidth = font.width(goal);
-        int strikeY = y + 11;
+        int strikeY = y + 10;
 
-        int red = (alpha << 24) | 0xD12C2C;
+        int redAlpha = Math.max(0, Math.min(255, alpha));
+        int red = (redAlpha << 24) | 0xE13B3B;
+
         graphics.fill(x + 7, strikeY, x + 7 + textWidth, strikeY + 2, red);
     }
 
