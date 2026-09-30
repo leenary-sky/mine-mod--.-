@@ -41,17 +41,19 @@ public class RestrictionsScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        int left = (width - PANEL_W) / 2;
-        int top = (height - PANEL_H) / 2;
-
-        if (event.button() == 0
-                && event.x() >= left + 8 && event.x() <= left + 40
-                && event.y() >= top + 8 && event.y() <= top + 32) {
+        if (isBackHovered(event.x(), event.y()) && event.button() == 0) {
             goBack();
             return true;
         }
 
         return super.mouseClicked(event, doubleClick);
+    }
+
+    private boolean isBackHovered(double mouseX, double mouseY) {
+        int left = (width - PANEL_W) / 2;
+        int top = (height - PANEL_H) / 2;
+        return mouseX >= left + 6 && mouseX <= left + 42
+                && mouseY >= top + 6 && mouseY <= top + 34;
     }
 
     @Override
@@ -68,8 +70,12 @@ public class RestrictionsScreen extends Screen {
         graphics.fill(left, top, left + 4, top + PANEL_H, 0xFFB0B0B0);
         graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF303030);
 
-        // Keep the original visible arrow and make it clickable via mouseClicked above.
-        graphics.text(font, "←", left + 11, top + 11, 0xFFFFFFFF, true);
+        // Large hit area with a subtle hover plate; the arrow itself stays white with a shadow.
+        if (isBackHovered(mouseX, mouseY)) {
+            graphics.fill(left + 6, top + 6, left + 42, top + 34, 0x44202020);
+        }
+        graphics.text(font, "←", left + 12, top + 10, 0xFF202020, false);
+        graphics.text(font, "←", left + 11, top + 9, 0xFFFFFFFF, true);
 
         String title = "ПРАВИЛА ИСПЫТАНИЯ";
         String subtitle = "Каждое усиление забирает одну возможность.";
@@ -139,7 +145,6 @@ public class RestrictionsScreen extends Screen {
                 true);
 
         if (completed) {
-            // Let the red strike slightly overhang both sides of the row.
             int strikeY = rowTop + rowH / 2 - 1;
             graphics.fill(x - 6, strikeY, x + rowW + 6, strikeY + 2, 0xFFE13B3B);
         }
