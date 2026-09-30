@@ -1,8 +1,8 @@
 package com.kirane.restrictions;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -23,19 +23,6 @@ public class RestrictionsScreen extends Screen {
     }
 
     @Override
-    protected void init() {
-        int left = (width - PANEL_W) / 2;
-        int top = (height - PANEL_H) / 2;
-
-        // Use a real Minecraft button so the back arrow keeps working.
-        addRenderableWidget(
-                Button.builder(Component.literal("←"), button -> goBack())
-                        .bounds(left + 8, top + 8, 28, 20)
-                        .build()
-        );
-    }
-
-    @Override
     public void onClose() {
         goBack();
     }
@@ -53,6 +40,21 @@ public class RestrictionsScreen extends Screen {
     }
 
     @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        int left = (width - PANEL_W) / 2;
+        int top = (height - PANEL_H) / 2;
+
+        if (event.button() == 0
+                && event.x() >= left + 8 && event.x() <= left + 40
+                && event.y() >= top + 8 && event.y() <= top + 32) {
+            goBack();
+            return true;
+        }
+
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         int left = (width - PANEL_W) / 2;
         int top = (height - PANEL_H) / 2;
@@ -65,6 +67,9 @@ public class RestrictionsScreen extends Screen {
         graphics.fill(left, top + PANEL_H - 4, left + PANEL_W, top + PANEL_H, 0xFF303030);
         graphics.fill(left, top, left + 4, top + PANEL_H, 0xFFB0B0B0);
         graphics.fill(left + PANEL_W - 4, top, left + PANEL_W, top + PANEL_H, 0xFF303030);
+
+        // Keep the original visible arrow and make it clickable via mouseClicked above.
+        graphics.text(font, "←", left + 11, top + 11, 0xFFFFFFFF, true);
 
         String title = "ПРАВИЛА ИСПЫТАНИЯ";
         String subtitle = "Каждое усиление забирает одну возможность.";
@@ -134,8 +139,9 @@ public class RestrictionsScreen extends Screen {
                 true);
 
         if (completed) {
+            // Let the red strike slightly overhang both sides of the row.
             int strikeY = rowTop + rowH / 2 - 1;
-            graphics.fill(x + 2, strikeY, x + rowW - 2, strikeY + 2, 0xFFE13B3B);
+            graphics.fill(x - 6, strikeY, x + rowW + 6, strikeY + 2, 0xFFE13B3B);
         }
     }
 
