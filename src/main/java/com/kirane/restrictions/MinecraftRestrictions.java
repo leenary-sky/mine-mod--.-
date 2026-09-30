@@ -1,19 +1,19 @@
 package com.kirane.restrictions;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.api.event.player.UseItemCallback;
+import net.fabricmc.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -32,6 +32,8 @@ public class MinecraftRestrictions implements ModInitializer {
     private static final String NETHER_STAGE = "mr_nether";
     private static final String FORTRESS_STAGE = "mr_fortress";
     private static final String END_STAGE = "mr_end";
+    private static final String DRAGON_STAGE = "mr_dragon";
+    private static final String STORAGE_GLOBAL_PREFIX = "global.";
     private static final Identifier STORAGE_ID = Identifier.parse(MOD_ID + ":player_restrictions");
 
     @Override
@@ -43,6 +45,21 @@ public class MinecraftRestrictions implements ModInitializer {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayer player = handler.getPlayer();
             ServerPlayNetworking.send(player, new RestrictionPayload(stageMask(player), 0));
+        });
+
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
+            if (!(entity instanceof EnderDragon dragon)) {
+                return;
+            }
+
+            MinecraftServer server = dragon.level().getServer();
+            if (server == null || hasGlobalStage(server, DRAGON_STAGE)) {
+                return;
+            }
+
+            // Dragon completion belongs to the server, not to the player who dealt the final hit.
+            setGlobalStage(server, DRAGON_STAGE);
+            syncAllPlayers(server);
         });
 
         UseItemCallback.EVENT.register((player, level, hand) -> {
@@ -118,6 +135,19 @@ public class MinecraftRestrictions implements ModInitializer {
     }
 
     private static int stageMask(ServerPlayer player) {
+        MinecraftServer server = player.level().getServer();
+        if (server == null) {
+            return playerStageMaskWithoutGlobal(player);
+        }
+
+        int mask = playerStageMaskWithoutGlobal(player);
+        if (hasGlobalStage(server, DRAGON_STAGE)) {
+            mask |= 32;
+        }
+        return mask;
+    }
+
+    private static int playerStageMaskWithoutGlobal(ServerPlayer player) {
         int mask = 0;
         if (hasStage(player, IRON_STAGE)) mask |= 1;
         if (hasStage(player, DIAMOND_STAGE)) mask |= 2;
@@ -125,6 +155,23 @@ public class MinecraftRestrictions implements ModInitializer {
         if (hasStage(player, FORTRESS_STAGE)) mask |= 8;
         if (hasStage(player, END_STAGE)) mask |= 16;
         return mask;
+    }
+
+    private static void syncAllPlayers(MinecraftServer server) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            ServerPlayNetworking.send(player, new RestrictionPayload(stageMask(player), 0));
+        }
+    }
+
+    private static boolean hasGlobalStage(MinecraftServer server, String stage) {
+        CompoundTag data = server.getCommandStorage().get(STORAGE_ID);
+        return data.getBooleanOr(STORAGE_GLOBAL_PREFIX + stage, false);
+    }
+
+    private static void setGlobalStage(MinecraftServer server, String stage) {
+        CompoundTag data = server.getCommandStorage().get(STORAGE_ID);
+        data.putBoolean(STORAGE_GLOBAL_PREFIX + stage, true);
+        server.getCommandStorage().set(STORAGE_ID, data);
     }
 
     public static boolean hasEndRestriction(ServerPlayer player) {
