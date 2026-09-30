@@ -141,15 +141,13 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         String title = "ЗАДАНИЕ ВЫПОЛНЕНО";
         String subtitle = "НА ВАС НАЛОЖЕНО ОГРАНИЧЕНИЕ";
 
-        // Keep the central text block centered as one unit.
         int titleX = x + (width - font.width(title)) / 2;
         int subtitleX = x + (width - font.width(subtitle)) / 2;
 
-        graphics.text(font, title, titleX, y + 26, 0xFFFFD83D, true);
-        graphics.text(font, subtitle, subtitleX, y + 56, 0xFFFFFFFF, true);
+        // Only vertical placement is changed: the text is moved slightly down.
+        graphics.text(font, title, titleX, y + 30, 0xFFFFD83D, true);
+        graphics.text(font, subtitle, subtitleX, y + 60, 0xFFFFFFFF, true);
 
-        // Icons mirror the user's desired composition: same size, same height,
-        // symmetrically placed around the centered text block.
         final float scale = 1.75f;
         final int iconSize = Math.round(16 * scale);
         final int iconY = y + (height - iconSize) / 2;
