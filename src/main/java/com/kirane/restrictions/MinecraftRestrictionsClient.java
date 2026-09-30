@@ -3,10 +3,10 @@ package com.kirane.restrictions;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.HudElementRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.VanillaHudElements;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -19,7 +19,6 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
     private static final KeyMapping RULES_KEY = KeyMappingHelper.registerKeyMapping(
             new KeyMapping(
                     "key.minecraft_restrictions.rules",
-                    InputConstants.Type.KEYSYM,
                     InputConstants.KEY_J,
                     KeyMapping.Category.register(Identifier.parse("minecraft_restrictions:controls"))
             )
@@ -33,8 +32,8 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(RestrictionPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
-                activeStages = payload.stage();
-                notificationStage = payload.stage();
+                activeStages = payload.mask();
+                notificationStage = payload.notificationStage();
                 notificationUntil = System.currentTimeMillis() + 3500L;
             });
         });
@@ -42,14 +41,14 @@ public class MinecraftRestrictionsClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (RULES_KEY.consumeClick()) {
                 if (client.player != null) {
-                    client.setScreen(new RestrictionsScreen());
+                    client.gui.setScreen(new RestrictionsScreen());
                 }
             }
 
             // Stop both Ctrl-style sprinting and double-W sprinting on the client.
             if (client.player != null && (activeStages & 1) != 0) {
                 client.player.setSprinting(false);
-                client.options.keySprint().setDown(false);
+                client.options.keySprint.setDown(false);
             }
         });
 
