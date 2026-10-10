@@ -13,7 +13,7 @@ public final class GhostPartnerConfig {
     private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("ghost-partner.properties");
 
     public static int timerSeconds = 240;
-    public static double ghostRadius = 18.0;
+    public static double ghostRadius = 9.0;
     public static int ritualSeconds = 5;
     public static double reviveHealth = 6.0;
     public static int resistanceSeconds = 3;
@@ -35,7 +35,7 @@ public final class GhostPartnerConfig {
         }
 
         timerSeconds = clamp(parseInt(properties, "timerSeconds", 240), 180, 300);
-        ghostRadius = clamp(parseDouble(properties, "ghostRadius", 18.0), 15.0, 20.0);
+        ghostRadius = clamp(parseDouble(properties, "ghostRadius", 9.0), 4.0, 10.0);
         ritualSeconds = clamp(parseInt(properties, "ritualSeconds", 5), 1, 30);
         reviveHealth = clamp(parseDouble(properties, "reviveHealth", 6.0), 2.0, 20.0);
         resistanceSeconds = clamp(parseInt(properties, "resistanceSeconds", 3), 1, 30);
