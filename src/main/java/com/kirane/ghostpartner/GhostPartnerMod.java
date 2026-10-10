@@ -15,6 +15,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -127,7 +129,7 @@ public final class GhostPartnerMod implements ModInitializer {
 
     private static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("ghostpartner")
-                .requires(source -> source.hasPermission(2))
+                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_MODERATOR))
                 .then(Commands.literal("status").executes(context -> {
                     CompoundTag data = data(context.getSource().getServer());
                     context.getSource().sendSuccess(() -> Component.literal(
@@ -203,7 +205,7 @@ public final class GhostPartnerMod implements ModInitializer {
         if (server.getTickCount() % 20 == 0) {
             int seconds = (int) Math.max(0, remaining / 1000);
             String timer = String.format("СПАСИТЕ НАПАРНИКА: %02d:%02d", seconds / 60, seconds % 60);
-            survivor.displayClientMessage(Component.literal(timer + " | маяк: "
+            survivor.sendSystemMessage(Component.literal(timer + " | маяк: "
                     + (int) data.getDoubleOr("deathX", 0.0) + " "
                     + (int) data.getDoubleOr("deathY", 0.0) + " "
                     + (int) data.getDoubleOr("deathZ", 0.0)), true);
@@ -239,7 +241,7 @@ public final class GhostPartnerMod implements ModInitializer {
 
         if (progress > 0 && server.getTickCount() % 5 == 0) {
             int percent = Math.min(100, progress * 100 / (GhostPartnerConfig.ritualSeconds * 20));
-            survivor.displayClientMessage(Component.literal("ВОСКРЕШЕНИЕ: " + percent + "%"), true);
+            survivor.sendSystemMessage(Component.literal("ВОСКРЕШЕНИЕ: " + percent + "%"), true);
         }
         if (progress < GhostPartnerConfig.ritualSeconds * 20) return;
 
@@ -253,7 +255,7 @@ public final class GhostPartnerMod implements ModInitializer {
         double y = data.getDoubleOr("deathY", 0.0) + 0.1;
         double z = data.getDoubleOr("deathZ", 0.0) + 0.5;
         if (ghost != null) {
-            ghost.teleportTo(deathLevel, x, y, z, ghost.getYRot(), ghost.getXRot());
+            ghost.teleportTo(deathLevel, x, y, z, Relative.ROTATION, ghost.getYRot(), ghost.getXRot(), true);
             ghost.setGameMode(GameType.SURVIVAL);
             ghost.setHealth((float) GhostPartnerConfig.reviveHealth);
             ghost.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, GhostPartnerConfig.resistanceSeconds * 20, 0));
@@ -316,7 +318,7 @@ public final class GhostPartnerMod implements ModInitializer {
         data.putString(STATUS, LOST);
         save(server, data);
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            player.displayClientMessage(Component.literal(message), false);
+            player.sendSystemMessage(Component.literal(message), false);
             player.setGameMode(GameType.SPECTATOR);
         }
         LOGGER.warn(message);
