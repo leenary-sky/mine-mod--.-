@@ -19,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class GhostPartnerClient implements ClientModInitializer {
     private static volatile RoundHudPayload state =
-            new RoundHudPayload(false, (byte) 0, 0, BlockPos.ZERO, 0, 100);
+            new RoundHudPayload(false, (byte) 0, 0, BlockPos.ZERO, false, 0, 100);
 
     @Override
     public void onInitializeClient() {
@@ -60,10 +60,15 @@ public final class GhostPartnerClient implements ClientModInitializer {
         graphics.text(minecraft.font, timer, x + width - 48, y + 8, seconds <= 30 ? GhostHudStyle.TIMER_DANGER : GhostHudStyle.TEXT, false);
 
         BlockPos target = snapshot.target();
-        double distance = minecraft.player.position().distanceTo(Vec3.atCenterOf(target));
-        String direction = directionArrow(minecraft, target);
-        graphics.text(minecraft.font, direction + "  МАЯК  ·  " + Math.round(distance) + " м",
-                x + 10, y + 25, GhostHudStyle.TEXT, false);
+        if (!snapshot.targetInSameDimension()) {
+            graphics.text(minecraft.font, "МАЯК В ДРУГОМ ИЗМЕРЕНИИ",
+                    x + 10, y + 25, GhostHudStyle.TEXT, false);
+        } else {
+            double distance = minecraft.player.position().distanceTo(Vec3.atCenterOf(target));
+            String direction = directionArrow(minecraft, target);
+            graphics.text(minecraft.font, direction + "  МАЯК  ·  " + Math.round(distance) + " м",
+                    x + 10, y + 25, GhostHudStyle.TEXT, false);
+        }
 
         int barX = x + 10;
         int barY = y + 45;
