@@ -2,8 +2,7 @@ package com.kirane.ghostpartner.client.mixin;
 
 import com.kirane.ghostpartner.client.GhostPartnerClient;
 import net.minecraft.client.Camera;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.BlockGetter;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -17,9 +16,11 @@ public abstract class GhostCameraMixin implements GhostCameraAccess {
 
     @Override public void ghostPartner$setPosition(Vec3 position) { setPosition(position); }
     @Override public void ghostPartner$setRotation(float yaw, float pitch) { setRotation(yaw, pitch); }
-    @Inject(method = "setup", at = @At("TAIL"))
-    private void ghostPartner$orbitCamera(BlockGetter level, Entity entity, boolean thirdPerson,
-                                          boolean inverseView, float partialTick, CallbackInfo ci) {
+
+    // Minecraft 26.3 updates the camera through update(DeltaTracker); the old setup(...)
+    // entry point no longer exists in this version.
+    @Inject(method = "update", at = @At("TAIL"))
+    private void ghostPartner$orbitCamera(DeltaTracker deltaTracker, CallbackInfo ci) {
         GhostPartnerClient.applyOrbitCamera((Camera) (Object) this);
     }
 }
