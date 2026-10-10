@@ -101,7 +101,10 @@ public final class GhostPartnerMod implements ModInitializer {
                 syncHud(handler.getPlayer(), data, server);
                 return;
             }
-            if (!ACTIVE.equals(status)) return;
+            if (!ACTIVE.equals(status)) {
+                syncHud(handler.getPlayer(), data, server);
+                return;
+            }
             UUID ghostId = uuid(data.getStringOr("ghost", ""));
             if (ghostId != null && ghostId.equals(handler.getPlayer().getUUID())) {
                 handler.getPlayer().setGameMode(GameType.SPECTATOR);
