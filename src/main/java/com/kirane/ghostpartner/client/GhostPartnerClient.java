@@ -4,6 +4,7 @@ import com.kirane.ghostpartner.GhostPartnerMod;
 import com.kirane.ghostpartner.RoundHudPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientPlayerEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -21,11 +22,16 @@ import net.minecraft.world.item.Items;
 public final class GhostPartnerClient implements ClientModInitializer {
     private static volatile RoundHudPayload state =
             new RoundHudPayload(false, (byte) 0, 0, BlockPos.ZERO, false, 0, 100);
+    private static volatile long transitionStartedAt = 0L;
+    private static final long TRANSITION_DURATION_MS = 1000L;
+    private static final long TRANSITION_PEAK_MS = 360L;
 
     @Override
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(RoundHudPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> state = payload));
+        ClientPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
+                transitionStartedAt = System.currentTimeMillis());
         HudElementRegistry.addLast(
                 Identifier.parse(GhostPartnerMod.MOD_ID + ":round_hud"),
                 GhostPartnerClient::renderHud
@@ -35,6 +41,8 @@ public final class GhostPartnerClient implements ClientModInitializer {
     private static void renderHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null) return;
+
+        renderRespawnTransition(graphics, minecraft);
 
         // The temporary compass acts as the HUD device: no permanent on-screen nagging.
         boolean compassEquipped = minecraft.player.getMainHandItem().is(Items.COMPASS)
@@ -89,6 +97,28 @@ public final class GhostPartnerClient implements ClientModInitializer {
                 ? "РИТУАЛ  " + Math.round(progress * 100.0 / total) + "%"
                 : "УДЕРЖИВАЙ SHIFT У МАЯКА";
         graphics.text(minecraft.font, ritual, barX, y + 56, GhostHudStyle.MUTED_TEXT, false);
+    }
+
+    private static void renderRespawnTransition(GuiGraphicsExtractor graphics, Minecraft minecraft) {
+        long started = transitionStartedAt;
+        if (started == 0L) return;
+        long elapsed = System.currentTimeMillis() - started;
+        if (elapsed >= TRANSITION_DURATION_MS) {
+            transitionStartedAt = 0L;
+            return;
+        }
+
+        float amount;
+        if (elapsed <= TRANSITION_PEAK_MS) {
+            amount = elapsed / (float) TRANSITION_PEAK_MS;
+        } else {
+            amount = 1.0f - (elapsed - TRANSITION_PEAK_MS)
+                    / (float) (TRANSITION_DURATION_MS - TRANSITION_PEAK_MS);
+        }
+        int alpha = Mth.clamp(Math.round(220.0f * amount), 0, 220);
+        int width = minecraft.getWindow().getGuiScaledWidth();
+        int height = minecraft.getWindow().getGuiScaledHeight();
+        graphics.fill(0, 0, width, height, (alpha << 24));
     }
 
     private static String directionArrow(Minecraft minecraft, BlockPos target) {
