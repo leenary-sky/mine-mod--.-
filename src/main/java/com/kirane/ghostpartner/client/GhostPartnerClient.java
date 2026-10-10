@@ -12,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.Items;
 
 /**
  * Temporary, deliberately simple HUD. The layout can be replaced without changing round logic.
@@ -34,6 +35,11 @@ public final class GhostPartnerClient implements ClientModInitializer {
     private static void renderHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null) return;
+
+        // The temporary compass acts as the HUD device: no permanent on-screen nagging.
+        boolean compassEquipped = minecraft.player.getMainHandItem().is(Items.COMPASS)
+                || minecraft.player.getOffhandItem().is(Items.COMPASS);
+        if (!compassEquipped) return;
 
         RoundHudPayload snapshot = state;
         if (snapshot.role() == 3) {
