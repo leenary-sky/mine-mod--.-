@@ -1,45 +1,42 @@
-# Minecraft Restrictions
+# Ghost Partner — Fabric 26.3
 
 [🇷🇺 Русский](README.ru.md) | [🇬🇧 English](README.md)
 
-**Minecraft Java 26.3 · Fabric**
+A two-player co-op challenge. After the first death, the dead player becomes an invisible spectator ghost. The survivor has four minutes to reach the death location and complete a short rescue ritual.
 
-A challenge mod that turns the video's rules into gameplay restrictions. Once a trigger activates, its restriction is **permanent for that player in that world**. Leaving the world, restarting the game, or dying does not reset it.
+> This is an early build. The listed mechanics are implemented in source, but still need an in-game test with a dedicated server and two clients before recording.
 
-## Challenge rules
+## Implemented
 
-1. **Obtain an iron ingot** → sprinting is forbidden.
-2. **Obtain a diamond** → shields are forbidden.
-3. **Enter the Nether for the first time** → armor is forbidden.
-4. **Discover a Nether Fortress** → bows are forbidden.
-5. **Enter the End for the first time** → placing blocks is forbidden.
-6. Goal: defeat the Ender Dragon.
+- Starts a round after one of exactly two connected players dies; round state is persisted in world command storage.
+- Automatically respawns the ghost through a brief blackout instead of leaving the vanilla death screen open.
+- The ghost uses spectator mode. Its server-side player body follows a horizontal orbit around the survivor, tracks the survivor's jump height, and smoothly turns its head toward them.
+- The ghost camera orbits the survivor with frame-time-based smoothing. Mouse-wheel zoom is synchronized to the server so the body stays near the camera.
+- A small soul model is rendered only on the ghost's client.
+- The survivor receives a rescue compass. Holding it displays the direction, distance, timer, and ritual progress; right-clicking it opens a panel with the death coordinates.
+- Soul-particle beacon, protection against nearby dropped loot despawning, Shift-to-rescue ritual, and ritual reset on movement or damage.
+- Resurrection with 6 HP and three seconds of Resistance.
+- Round loss if the survivor dies or the timer expires.
+- Operator commands: `/ghostpartner status`, `/ghostpartner reset`, and `/ghostpartner restart`.
 
-## Visual feedback
+## Not finished / still needs verification
 
-- Russian notifications when each restriction activates.
-- Active restrictions are shown in the action bar.
-- Armor is removed when the armor restriction activates.
-
-## Important details
-
-- Iron and diamond triggers activate when the item is in the inventory; smelting iron or mining a diamond with a particular tool is not required.
-- Fortress detection looks for characteristic Nether Brick blocks near the player. This is a practical recording-friendly trigger, but player-built blocks could also trigger it.
-- “No blocks” means no **placing** blocks; breaking blocks remains allowed.
-- Progress is stored in persistent player scoreboard tags.
+- Final ghost player model, skin, and animations (the current soul is a temporary cube model).
+- A separately registered compass item and custom texture; the current panel reuses the vanilla compass.
+- Testing camera/body movement on a dedicated server, in single-player, and with network latency.
+- Simple Voice Chat integration, final UI art, and automated in-game tests.
+- World deletion is intentionally not implemented. The reserved `deleteWorldOnFailure` config property does not delete anything.
 
 ## Build
 
-Java 25 and Gradle are required. From the project root, run:
+Java 25 and Gradle are required. From the repository root:
 
 ```bash
-./gradlew build
+gradle --no-daemon clean build
 ```
 
-On Windows:
+The JAR is written to `build/libs/`. Install Fabric Loader for Minecraft 26.3 and a compatible Fabric API version; install the mod on the server and both clients.
 
-```bat
-gradlew.bat build
-```
+## Manual test
 
-The JAR will be created in `build/libs/`. Install Fabric Loader for Minecraft 26.3 and a compatible Fabric API version to run it.
+See [`docs/TESTING.md`](docs/TESTING.md). Test automatic respawn, orbit movement at different zoom levels, survivor jumps, the compass panel, and rescue completion.
