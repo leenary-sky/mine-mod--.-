@@ -24,6 +24,7 @@ public final class GhostPartnerClient implements ClientModInitializer {
             new RoundHudPayload(false, (byte) 0, 0, BlockPos.ZERO, false, 0, 100);
     private static volatile long transitionStartedAt = 0L;
     private static net.minecraft.client.player.LocalPlayer lastObservedPlayer;
+    private static boolean respawnRequested;
     private static final long FADE_IN_MS = 3500L;
     private static final long BLACK_HOLD_MS = 1000L;
     private static final long FADE_OUT_MS = 3500L;
@@ -82,13 +83,19 @@ public final class GhostPartnerClient implements ClientModInitializer {
                 (payload, context) -> context.client().execute(() -> state = payload));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player != null && state.active() && state.role() == 2
-                    && client.player.getHealth() <= 0.0f && transitionStartedAt == 0L) {
-                transitionStartedAt = System.currentTimeMillis();
+                    && client.player.getHealth() <= 0.0f) {
+                if (transitionStartedAt == 0L) transitionStartedAt = System.currentTimeMillis();
+                if (!respawnRequested && System.currentTimeMillis() - transitionStartedAt >= FADE_IN_MS + 100L
+                        && client.getConnection() != null) {
+                    client.getConnection().send(new net.minecraft.network.protocol.game.ServerboundClientCommandPacket(
+                            net.minecraft.network.protocol.game.ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
+                    respawnRequested = true;
+                }
             }
-            if (client.player != null && lastObservedPlayer != null && client.player != lastObservedPlayer
-                    && transitionStartedAt == 0L) {
-                transitionStartedAt = System.currentTimeMillis();
+            if (client.player != null && lastObservedPlayer != null && client.player != lastObservedPlayer) {
+                respawnRequested = false;
             }
+            if (client.player == null) respawnRequested = false;
             lastObservedPlayer = client.player;
         });
         HudElementRegistry.addLast(
