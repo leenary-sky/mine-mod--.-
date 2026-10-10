@@ -10,9 +10,11 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
 
-/** Renders the local dead player's small ghost cube beside the surviving partner. */
+/**
+ * Draws the ghost on the living partner's player renderer, so it is rendered where the camera is.
+ * The local dead/ghost player's renderer can be outside the view frustum and is not a reliable host.
+ */
 public final class GhostCubeLayer extends RenderLayer<AvatarRenderState, net.minecraft.client.model.player.PlayerModel> {
     private static final Identifier TEXTURE =
             Identifier.parse("ghost_partner:textures/entity/ghost.png");
@@ -28,23 +30,28 @@ public final class GhostCubeLayer extends RenderLayer<AvatarRenderState, net.min
                        AvatarRenderState state, float yRot, float xRot) {
         Minecraft mc = Minecraft.getInstance();
         if (!GhostPartnerClient.isGhostCameraActive() || mc.player == null || mc.level == null
-                || state.id != mc.player.getId()) {
+                || state.id == mc.player.getId()) {
             return;
         }
 
-        Player target = null;
+        Player partner = null;
         for (Player candidate : mc.level.players()) {
-            if (candidate != mc.player && candidate.isAlive()) {
-                target = candidate;
+            if (candidate.getId() == state.id && candidate.isAlive()) {
+                partner = candidate;
                 break;
             }
         }
-        if (target == null) return;
+        if (partner == null) return;
 
-        Vec3 local = mc.player.position();
-        Vec3 targetPos = target.position();
+        // Orbit in the partner model's local space: radius ~0.55 blocks, gentle vertical bob.
+        // 16 model pixels = 1 block; the cube itself remains 6x6x6 pixels as authored in Blockbench.
+        double time = System.currentTimeMillis() / 1000.0;
+        float orbitX = (float) (Math.cos(time * 1.35) * 0.55);
+        float orbitZ = (float) (Math.sin(time * 1.35) * 0.55);
+        float bob = (float) (Math.sin(time * 2.4) * 0.12);
+
         poseStack.pushPose();
-        poseStack.translate(targetPos.x - local.x, targetPos.y - local.y, targetPos.z - local.z);
+        poseStack.translate(orbitX, bob, orbitZ);
         ghostModel.setupAnim(state);
         collector.submitModel(ghostModel, state, poseStack, TEXTURE, light,
                 OverlayTexture.NO_OVERLAY, state.outlineColor);
