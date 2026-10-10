@@ -37,13 +37,11 @@ public final class GhostPartnerMod implements ModInitializer {
     private static final String IDLE = "idle";
     private static final String ACTIVE = "active";
     private static final String LOST = "lost";
-    private static final long DEFAULT_TIMER_MS = 4 * 60 * 1000L;
-    private static final double GHOST_RADIUS = 18.0;
     private static final double RITUAL_RADIUS = 2.0;
-    private static final int RITUAL_TICKS = 100;
 
     @Override
     public void onInitialize() {
+        GhostPartnerConfig.load();
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             if (!(entity instanceof ServerPlayer dead)) return;
             MinecraftServer server = dead.level().getServer();
@@ -76,7 +74,7 @@ public final class GhostPartnerMod implements ModInitializer {
             data.putDouble("deathY", dead.getY());
             data.putDouble("deathZ", dead.getZ());
             data.putString("deathDimension", dead.level().dimension().toString());
-            data.putLong("deadline", System.currentTimeMillis() + DEFAULT_TIMER_MS);
+            data.putLong("deadline", System.currentTimeMillis() + GhostPartnerConfig.timerSeconds * 1000L);
             data.putInt("ritualTicks", 0);
             data.putDouble("lastX", partner.getX());
             data.putDouble("lastY", partner.getY());
@@ -173,7 +171,7 @@ public final class GhostPartnerMod implements ModInitializer {
             double x = data.getDoubleOr("deathX", 0.0);
             double y = data.getDoubleOr("deathY", 0.0);
             double z = data.getDoubleOr("deathZ", 0.0);
-            if (server.getTickCount() % 5 == 0) {
+            if (GhostPartnerConfig.soulParticles && server.getTickCount() % 5 == 0) {
                 beaconLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, y + 0.5, z,
                         3, 0.22, 0.35, 0.22, 0.01);
                 beaconLevel.sendParticles(ParticleTypes.SOUL, x, y + 0.7, z,
@@ -184,7 +182,7 @@ public final class GhostPartnerMod implements ModInitializer {
 
         if (ghost != null && ghost.level() == survivor.level()) {
             keepGhostNear(ghost, survivor);
-            if (server.getTickCount() % 10 == 0) {
+            if (GhostPartnerConfig.soulParticles && server.getTickCount() % 10 == 0) {
                 ghost.level().sendParticles(ParticleTypes.SOUL, ghost.getX(), ghost.getY() + 0.5,
                         ghost.getZ(), 2, 0.25, 0.35, 0.25, 0.005);
             }
@@ -228,10 +226,10 @@ public final class GhostPartnerMod implements ModInitializer {
         data.putFloat("lastHealth", survivor.getHealth());
 
         if (progress > 0 && server.getTickCount() % 5 == 0) {
-            int percent = Math.min(100, progress * 100 / RITUAL_TICKS);
+            int percent = Math.min(100, progress * 100 / (GhostPartnerConfig.ritualSeconds * 20));
             survivor.displayClientMessage(Component.literal("ВОСКРЕШЕНИЕ: " + percent + "%"), true);
         }
-        if (progress < RITUAL_TICKS) return;
+        if (progress < GhostPartnerConfig.ritualSeconds * 20) return;
 
         ServerLevel deathLevel = findDeathLevel(server, data);
         if (deathLevel == null) {
@@ -245,8 +243,8 @@ public final class GhostPartnerMod implements ModInitializer {
         if (ghost != null) {
             ghost.teleportTo(deathLevel, x, y, z, ghost.getYRot(), ghost.getXRot());
             ghost.setGameMode(GameType.SURVIVAL);
-            ghost.setHealth(6.0F);
-            ghost.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 60, 0));
+            ghost.setHealth((float) GhostPartnerConfig.reviveHealth);
+            ghost.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, GhostPartnerConfig.resistanceSeconds * 20, 0));
             ghost.sendSystemMessage(Component.literal("Ты воскрес! У вас снова одна общая попытка."));
         }
 
@@ -264,12 +262,12 @@ public final class GhostPartnerMod implements ModInitializer {
         double dy = ghost.getY() - survivor.getY();
         double dz = ghost.getZ() - survivor.getZ();
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (distance <= GHOST_RADIUS || distance < 0.001) return;
+        if (distance <= GhostPartnerConfig.ghostRadius || distance < 0.001) return;
 
-        double targetX = survivor.getX() + dx / distance * (GHOST_RADIUS - 0.75);
+        double targetX = survivor.getX() + dx / distance * (GhostPartnerConfig.ghostRadius - 0.75);
         double targetY = survivor.getY() + dy / distance * (GHOST_RADIUS - 0.75);
         double targetZ = survivor.getZ() + dz / distance * (GHOST_RADIUS - 0.75);
-        double factor = Math.min(0.35, (distance - GHOST_RADIUS + 0.5) / distance);
+        double factor = Math.min(0.35, (distance - GhostPartnerConfig.ghostRadius + 0.5) / distance);
         ghost.setPos(ghost.getX() + (targetX - ghost.getX()) * factor,
                 ghost.getY() + (targetY - ghost.getY()) * factor,
                 ghost.getZ() + (targetZ - ghost.getZ()) * factor);
