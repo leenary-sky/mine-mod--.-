@@ -19,10 +19,14 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.network.chat.Component;
@@ -47,6 +51,11 @@ public final class GhostPartnerMod implements ModInitializer {
     public void onInitialize() {
         GhostPartnerConfig.load();
         PayloadTypeRegistry.clientboundPlay().register(RoundHudPayload.TYPE, RoundHudPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(GhostOrbitDistancePayload.TYPE, GhostOrbitDistancePayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(GhostOrbitDistancePayload.TYPE, (payload, context) -> {
+            ServerPlayer sender = context.player();
+            context.server().execute(() -> updateOrbitDistance(sender, payload));
+        });
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
             if (!(entity instanceof ServerPlayer player)) return true;
             MinecraftServer server = player.level().getServer();
@@ -92,14 +101,20 @@ public final class GhostPartnerMod implements ModInitializer {
             data.putString("deathDimension", dead.level().dimension().toString());
             data.putLong("deadline", System.currentTimeMillis() + GhostPartnerConfig.timerSeconds * 1000L);
             data.putInt("ritualTicks", 0);
+            data.putInt("orbitDistanceTenths", 50);
             data.putDouble("lastX", partner.getX());
             data.putDouble("lastY", partner.getY());
             data.putDouble("lastZ", partner.getZ());
             data.putFloat("lastHealth", partner.getHealth());
+            giveRescueCompass(partner);
             save(server, data);
+            // Deliver the ghost role before the client's next render so the vanilla death menu
+            // can be hidden during the short automatic-respawn transition.
+            syncHud(server, data);
 
-            partner.sendSystemMessage(Component.literal("Напарник погиб. У тебя " + GhostPartnerConfig.timerSeconds + " секунд, чтобы воскресить его!"));
-            dead.sendSystemMessage(Component.literal("Ты стал призраком. Разведывай путь и помоги напарнику добраться до маяка."));
+            partner.sendSystemMessage(Component.literal("Напарник погиб. У тебя " + GhostPartnerConfig.timerSeconds
+                    + " секунд, чтобы воскресить его! Возьми компас в руку; ПКМ откроет панель."));
+            dead.sendSystemMessage(Component.literal("Ты стал призраком. Веди напарника к маяку; колесо мыши меняет зум орбиты."));
         });
 
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
@@ -117,22 +132,17 @@ public final class GhostPartnerMod implements ModInitializer {
                 return;
             }
 
-            // The player entity is replaced on respawn, so re-apply ghost abilities here.
+            // The player entity is replaced on respawn, so restore spectator flight and put
+            // the server-side body on the same orbit used by the detached camera.
             prepareGhostMovement(newPlayer);
             UUID survivorId = uuid(data.getStringOr("survivor", ""));
             ServerPlayer survivor = survivorId == null ? null : server.getPlayerList().getPlayer(survivorId);
             if (survivor != null) {
-                // Put the ghost beside the living partner, regardless of who hosted the world.
-                double x = survivor.getX() + 1.25;
-                double y = survivor.getY();
-                double z = survivor.getZ() + 0.25;
-                newPlayer.teleportTo(survivor.level(), x, y, z,
-                        Relative.ROTATION, newPlayer.getYRot(), newPlayer.getXRot(), true);
-                prepareGhostMovement(newPlayer);
+                keepGhostOnOrbit(newPlayer, survivor, data, true);
                 newPlayer.setDeltaMovement(0.0, 0.0, 0.0);
             }
             syncHud(newPlayer, data, server);
-            LOGGER.info("Respawned ghost {} beside partner {}", newPlayer.getGameProfile().name(), survivor == null ? "offline" : survivor.getGameProfile().name());
+            LOGGER.info("Respawned ghost {} on orbit around partner {}", newPlayer.getGameProfile().name(), survivor == null ? "offline" : survivor.getGameProfile().name());
         });
 
         ServerTickEvents.END_SERVER_TICK.register(GhostPartnerMod::tick);
@@ -151,8 +161,11 @@ public final class GhostPartnerMod implements ModInitializer {
                 return;
             }
             UUID ghostId = uuid(data.getStringOr("ghost", ""));
+            UUID survivorId = uuid(data.getStringOr("survivor", ""));
             if (ghostId != null && ghostId.equals(handler.getPlayer().getUUID())) {
                 prepareGhostMovement(handler.getPlayer());
+            } else if (survivorId != null && survivorId.equals(handler.getPlayer().getUUID())) {
+                giveRescueCompass(handler.getPlayer());
             }
             syncHud(handler.getPlayer(), data, server);
         });
@@ -184,6 +197,7 @@ public final class GhostPartnerMod implements ModInitializer {
         data.remove("survivor");
         data.remove("deadline");
         data.remove("ritualTicks");
+        data.remove("orbitDistanceTenths");
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (player.gameMode() == GameType.SPECTATOR || player.gameMode() == GameType.ADVENTURE) {
                 player.setGameMode(GameType.SURVIVAL);
@@ -243,9 +257,10 @@ public final class GhostPartnerMod implements ModInitializer {
             protectNearbyLoot(beaconLevel, x, y, z);
         }
 
-        if (ghost != null && ghost.level() == survivor.level()) {
-            keepGhostNear(ghost, survivor);
-            if (GhostPartnerConfig.soulParticles && server.getTickCount() % 10 == 0) {
+        if (ghost != null) {
+            keepGhostOnOrbit(ghost, survivor, data, false);
+            if (GhostPartnerConfig.soulParticles && ghost.level() == survivor.level()
+                    && server.getTickCount() % 10 == 0) {
                 ghost.level().sendParticles(ParticleTypes.SOUL, ghost.getX(), ghost.getY() + 0.5,
                         ghost.getZ(), 2, 0.25, 0.35, 0.25, 0.005);
             }
@@ -315,9 +330,48 @@ public final class GhostPartnerMod implements ModInitializer {
         data.remove("survivor");
         data.remove("deadline");
         data.remove("ritualTicks");
+        data.remove("orbitDistanceTenths");
         survivor.sendSystemMessage(Component.literal("Напарник воскрешён! Раунд продолжается."));
         syncHud(server, data);
         save(server, data);
+    }
+
+    private static void updateOrbitDistance(ServerPlayer sender, GhostOrbitDistancePayload payload) {
+        MinecraftServer server = sender.level().getServer();
+        if (server == null) return;
+        CompoundTag data = data(server);
+        UUID ghostId = uuid(data.getStringOr("ghost", ""));
+        if (!ACTIVE.equals(data.getStringOr(STATUS, IDLE))
+                || ghostId == null || !ghostId.equals(sender.getUUID())) {
+            return;
+        }
+
+        data.putInt("orbitDistanceTenths", Mth.clamp(
+                payload.distanceTenths(), 20, maxOrbitDistanceTenths()));
+        save(server, data);
+    }
+
+    private static int maxOrbitDistanceTenths() {
+        return Mth.clamp((int) Math.round(GhostPartnerConfig.ghostRadius * 10.0), 40, 100);
+    }
+
+    private static int orbitDistanceTenths(CompoundTag data) {
+        return Mth.clamp(data.getIntOr("orbitDistanceTenths", 50), 20, maxOrbitDistanceTenths());
+    }
+
+    private static void giveRescueCompass(ServerPlayer player) {
+        if (hasItem(player, Items.COMPASS)) return;
+        ItemStack compass = new ItemStack(Items.COMPASS);
+        if (!player.getInventory().add(compass)) {
+            player.drop(compass, false);
+        }
+    }
+
+    private static boolean hasItem(ServerPlayer player, Item item) {
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            if (player.getInventory().getItem(slot).is(item)) return true;
+        }
+        return false;
     }
 
     /**
@@ -346,48 +400,63 @@ public final class GhostPartnerMod implements ModInitializer {
             ServerPlayNetworking.send(player, new RoundHudPayload(
                     true, role, seconds, target,
                     player.level().dimension().toString().equals(data.getStringOr("deathDimension", "")),
-                    data.getIntOr("ritualTicks", 0), GhostPartnerConfig.ritualSeconds * 20));
+                    data.getIntOr("ritualTicks", 0), GhostPartnerConfig.ritualSeconds * 20,
+                    RoundHudPayload.packOrbitSettings(orbitDistanceTenths(data), maxOrbitDistanceTenths())));
         } else if (LOST.equals(status)) {
             ServerPlayNetworking.send(player, new RoundHudPayload(
-                    false, (byte) 3, 0, BlockPos.ZERO, false, 0, GhostPartnerConfig.ritualSeconds * 20));
+                    false, (byte) 3, 0, BlockPos.ZERO, false, 0, GhostPartnerConfig.ritualSeconds * 20,
+                    RoundHudPayload.packOrbitSettings(50, maxOrbitDistanceTenths())));
         } else {
             ServerPlayNetworking.send(player, new RoundHudPayload(
-                    false, (byte) 0, 0, BlockPos.ZERO, false, 0, GhostPartnerConfig.ritualSeconds * 20));
+                    false, (byte) 0, 0, BlockPos.ZERO, false, 0, GhostPartnerConfig.ritualSeconds * 20,
+                    RoundHudPayload.packOrbitSettings(50, maxOrbitDistanceTenths())));
         }
     }
 
     private static void prepareGhostMovement(ServerPlayer ghost) {
-        if (ghost.gameMode() != GameType.ADVENTURE) {
-            ghost.setGameMode(GameType.ADVENTURE);
+        if (ghost.gameMode() != GameType.SPECTATOR) {
+            ghost.setGameMode(GameType.SPECTATOR);
         }
-        // Flight remains available, but Adventure mode keeps normal block collision and line of sight.
+        // Spectator mode makes the real player body invisible and noclip; the local
+        // camera and ghost-only soul layer provide the visible first-person experience.
         ghost.getAbilities().mayfly = true;
         ghost.getAbilities().flying = true;
         ghost.onUpdateAbilities();
     }
 
-    private static void keepGhostNear(ServerPlayer ghost, ServerPlayer survivor) {
-        double dx = ghost.getX() - survivor.getX();
-        double dy = ghost.getY() - survivor.getY();
-        double dz = ghost.getZ() - survivor.getZ();
-        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        double radius = GhostPartnerConfig.ghostRadius;
-        if (distance < 0.001 || distance <= radius) return;
+    private static void keepGhostOnOrbit(ServerPlayer ghost, ServerPlayer survivor,
+                                         CompoundTag data, boolean snap) {
+        double radius = orbitDistanceTenths(data) / 10.0;
+        double yaw = Math.toRadians(ghost.getYRot());
+        double desiredX = survivor.getX() - Math.sin(yaw) * radius;
+        double desiredY = survivor.getY();
+        double desiredZ = survivor.getZ() + Math.cos(yaw) * radius;
 
-        // Rope behaviour: don't snap/teleport the ghost back. Keep its position on
-        // the boundary only for the excess distance, and remove velocity pointing outward.
-        double nx = dx / distance;
-        double ny = dy / distance;
-        double nz = dz / distance;
-        double excess = distance - radius;
-        ghost.setPos(ghost.getX() - nx * excess, ghost.getY() - ny * excess, ghost.getZ() - nz * excess);
+        boolean changedDimension = ghost.level() != survivor.level();
+        double dx = desiredX - ghost.getX();
+        double dy = desiredY - ghost.getY();
+        double dz = desiredZ - ghost.getZ();
+        boolean farAway = dx * dx + dy * dy + dz * dz > 64.0;
+        if (changedDimension || snap || farAway) {
+            // Use a hard correction only for respawn/dimension changes or a body that
+            // has drifted far away; ordinary orbit updates are applied in-place below.
+            ghost.teleportTo(survivor.level(), desiredX, desiredY, desiredZ,
+                    Relative.ROTATION, ghost.getYRot(), ghost.getXRot(), true);
+            ghost.setDeltaMovement(0.0, 0.0, 0.0);
+        } else {
+            // The client also places its local body at this same point each frame, so these
+            // small server corrections stay aligned with normal movement packets rather than
+            // issuing a teleport every tick. The camera itself is smoothed client-side.
+            ghost.setPos(desiredX, desiredY, desiredZ);
+            ghost.setDeltaMovement(0.0, 0.0, 0.0);
+        }
 
-        net.minecraft.world.phys.Vec3 velocity = ghost.getDeltaMovement();
-        double outwardSpeed = velocity.x * nx + velocity.y * ny + velocity.z * nz;
-        if (outwardSpeed > 0.0) {
-            ghost.setDeltaMovement(velocity.x - nx * outwardSpeed,
-                    velocity.y - ny * outwardSpeed,
-                    velocity.z - nz * outwardSpeed);
+        double lookX = survivor.getX() - ghost.getX();
+        double lookZ = survivor.getZ() - ghost.getZ();
+        if (lookX * lookX + lookZ * lookZ > 0.0001) {
+            float targetHeadYaw = (float) (Math.toDegrees(Math.atan2(lookZ, lookX)) - 90.0);
+            float headDelta = Mth.wrapDegrees(targetHeadYaw - ghost.getYHeadRot());
+            ghost.setYHeadRot(ghost.getYHeadRot() + Mth.clamp(headDelta, -12.0f, 12.0f));
         }
     }
 

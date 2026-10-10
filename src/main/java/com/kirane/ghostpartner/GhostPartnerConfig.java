@@ -13,6 +13,7 @@ public final class GhostPartnerConfig {
     private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("ghost-partner.properties");
 
     public static int timerSeconds = 240;
+    // Maximum horizontal radius shared by the ghost body and detached camera.
     public static double ghostRadius = 9.0;
     public static int ritualSeconds = 5;
     public static double reviveHealth = 6.0;
