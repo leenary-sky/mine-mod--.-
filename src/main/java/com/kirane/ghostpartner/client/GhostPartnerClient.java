@@ -2,6 +2,7 @@ package com.kirane.ghostpartner.client;
 
 import com.kirane.ghostpartner.GhostPartnerMod;
 import com.kirane.ghostpartner.RoundHudPayload;
+import com.kirane.ghostpartner.client.mixin.GhostCameraAccess;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
