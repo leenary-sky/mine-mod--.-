@@ -4,10 +4,17 @@
   "version": "${version}",
   "name": "Призрачный напарник",
   "description": "Кооперативный хардкор-режим для двух игроков: призрак, таймер спасения и ритуал воскрешения.",
-  "authors": ["Kirane"],
+  "authors": [
+    "Kirane"
+  ],
   "environment": "*",
   "entrypoints": {
-    "main": ["com.kirane.ghostpartner.GhostPartnerMod"]
+    "main": [
+      "com.kirane.ghostpartner.GhostPartnerMod"
+    ],
+    "client": [
+      "com.kirane.ghostpartner.client.GhostPartnerClient"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.19.5",
