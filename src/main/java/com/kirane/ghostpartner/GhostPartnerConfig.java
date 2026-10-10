@@ -50,7 +50,6 @@ public final class GhostPartnerConfig {
         properties.setProperty("resistanceSeconds", Integer.toString(resistanceSeconds));
         properties.setProperty("soulParticles", Boolean.toString(soulParticles));
         properties.setProperty("simpleVoiceChatIntegration", Boolean.toString(simpleVoiceChatIntegration));
-        properties.setProperty("# voice chat note", "Reserved only; enabling this flag does not add voice chat integration.");
         properties.setProperty("deleteWorldOnFailure", Boolean.toString(deleteWorldOnFailure));
         properties.setProperty("# warning", "deleteWorldOnFailure is reserved and does not delete worlds in this build.");
 
