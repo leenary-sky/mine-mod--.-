@@ -73,7 +73,7 @@ public final class GhostPartnerClient implements ClientModInitializer {
         int total = Math.max(1, snapshot.ritualTotalTicks());
         int progress = Mth.clamp(snapshot.ritualTicks(), 0, total);
         int filled = (int) (barWidth * (progress / (float) total));
-        if (filled > 0) graphics.fill(barX, barY, barX + filled, barY + barHeight, GhostHudStyle.PANEL_BORDER);
+        if (filled > 0) graphics.fill(barX, barY, barX + filled, barY + barHeight, GhostHudStyle.BAR_FILL);
         String ritual = progress > 0
                 ? "РИТУАЛ  " + Math.round(progress * 100.0 / total) + "%"
                 : "УДЕРЖИВАЙ SHIFT У МАЯКА";
