@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "GhostCameraMixin",
-    "GhostMouseMixin"
+    "GhostMouseMixin",
+    "GhostHudMixin",
+    "GhostDeathScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
