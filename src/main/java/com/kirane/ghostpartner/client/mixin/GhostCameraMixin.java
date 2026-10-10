@@ -1,6 +1,7 @@
 package com.kirane.ghostpartner.client.mixin;
 
 import com.kirane.ghostpartner.client.GhostPartnerClient;
+import com.kirane.ghostpartner.client.GhostPartnerClient.CameraAccess;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.world.phys.Vec3;
@@ -10,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Camera.class)
-public abstract class GhostCameraMixin implements GhostCameraAccess {
+public abstract class GhostCameraMixin implements CameraAccess {
     @org.spongepowered.asm.mixin.Shadow protected abstract void setPosition(Vec3 position);
     @org.spongepowered.asm.mixin.Shadow protected abstract void setRotation(float yaw, float pitch);
 
