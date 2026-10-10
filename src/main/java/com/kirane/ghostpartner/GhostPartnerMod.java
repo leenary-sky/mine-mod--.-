@@ -107,7 +107,7 @@ public final class GhostPartnerMod implements ModInitializer {
             }
             UUID ghostId = uuid(data.getStringOr("ghost", ""));
             if (ghostId != null && ghostId.equals(handler.getPlayer().getUUID())) {
-                handler.getPlayer().setGameMode(GameType.SPECTATOR);
+                prepareGhostMovement(handler.getPlayer());
             }
             syncHud(handler.getPlayer(), data, server);
         });
@@ -127,21 +127,30 @@ public final class GhostPartnerMod implements ModInitializer {
                             "Ghost Partner state: " + data.getStringOr(STATUS, IDLE)), false);
                     return 1;
                 }))
-                .then(Commands.literal("reset").executes(context -> {
-                    CompoundTag data = data(context.getSource().getServer());
-                    data.putString(STATUS, IDLE);
-                    data.remove("ghost");
-                    data.remove("survivor");
-                    data.remove("deadline");
-                    data.remove("ritualTicks");
-                    for (ServerPlayer player : context.getSource().getServer().getPlayerList().getPlayers()) {
-                        if (player.gameMode() == GameType.SPECTATOR) player.setGameMode(GameType.SURVIVAL);
-                    }
-                    syncHud(context.getSource().getServer(), data);
-                    save(context.getSource().getServer(), data);
-                    context.getSource().sendSuccess(() -> Component.literal("Тестовый раунд сброшен."), true);
-                    return 1;
-                })));
+                .then(Commands.literal("reset").executes(context -> resetRound(context.getSource().getServer(), context.getSource())))
+                .then(Commands.literal("restart").executes(context -> resetRound(context.getSource().getServer(), context.getSource()))));
+    }
+
+
+    private static int resetRound(MinecraftServer server, CommandSourceStack source) {
+        CompoundTag data = data(server);
+        data.putString(STATUS, IDLE);
+        data.remove("ghost");
+        data.remove("survivor");
+        data.remove("deadline");
+        data.remove("ritualTicks");
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (player.gameMode() == GameType.SPECTATOR || player.gameMode() == GameType.ADVENTURE) {
+                player.setGameMode(GameType.SURVIVAL);
+            }
+            player.getAbilities().mayfly = false;
+            player.getAbilities().flying = false;
+            player.onUpdateAbilities();
+        }
+        syncHud(server, data);
+        save(server, data);
+        source.sendSuccess(() -> Component.literal("Тестовый раунд перезапущен. Мир пересоздавать не нужно."), true);
+        return 1;
     }
 
     private static void tick(MinecraftServer server) {
@@ -170,8 +179,8 @@ public final class GhostPartnerMod implements ModInitializer {
 
         ServerPlayer ghost = server.getPlayerList().getPlayer(ghostId);
         ServerPlayer survivor = server.getPlayerList().getPlayer(survivorId);
-        if (ghost != null && ghost.gameMode() != GameType.SPECTATOR) {
-            ghost.setGameMode(GameType.SPECTATOR);
+        if (ghost != null) {
+            prepareGhostMovement(ghost);
         }
         if (survivor == null) return;
 
@@ -248,6 +257,9 @@ public final class GhostPartnerMod implements ModInitializer {
         if (ghost != null) {
             ghost.teleportTo(deathLevel, x, y, z, Relative.ROTATION, ghost.getYRot(), ghost.getXRot(), true);
             ghost.setGameMode(GameType.SURVIVAL);
+            ghost.getAbilities().mayfly = false;
+            ghost.getAbilities().flying = false;
+            ghost.onUpdateAbilities();
             ghost.setHealth((float) GhostPartnerConfig.reviveHealth);
             ghost.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, GhostPartnerConfig.resistanceSeconds * 20, 0));
             ghost.sendSystemMessage(Component.literal("Ты воскрес! У вас снова одна общая попытка."));
@@ -299,20 +311,40 @@ public final class GhostPartnerMod implements ModInitializer {
         }
     }
 
+    private static void prepareGhostMovement(ServerPlayer ghost) {
+        if (ghost.gameMode() != GameType.ADVENTURE) {
+            ghost.setGameMode(GameType.ADVENTURE);
+        }
+        // Flight remains available, but Adventure mode keeps normal block collision and line of sight.
+        ghost.getAbilities().mayfly = true;
+        ghost.getAbilities().flying = true;
+        ghost.onUpdateAbilities();
+    }
+
     private static void keepGhostNear(ServerPlayer ghost, ServerPlayer survivor) {
         double dx = ghost.getX() - survivor.getX();
         double dy = ghost.getY() - survivor.getY();
         double dz = ghost.getZ() - survivor.getZ();
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (distance <= GhostPartnerConfig.ghostRadius || distance < 0.001) return;
+        double radius = GhostPartnerConfig.ghostRadius;
+        if (distance <= radius || distance < 0.001) return;
 
-        double targetX = survivor.getX() + dx / distance * (GhostPartnerConfig.ghostRadius - 0.75);
-        double targetY = survivor.getY() + dy / distance * (GhostPartnerConfig.ghostRadius - 0.75);
-        double targetZ = survivor.getZ() + dz / distance * (GhostPartnerConfig.ghostRadius - 0.75);
-        double factor = Math.min(0.35, (distance - GhostPartnerConfig.ghostRadius + 0.5) / distance);
-        ghost.setPos(ghost.getX() + (targetX - ghost.getX()) * factor,
-                ghost.getY() + (targetY - ghost.getY()) * factor,
-                ghost.getZ() + (targetZ - ghost.getZ()) * factor);
+        // A hard spherical tether: clamp to the boundary every tick instead of teleporting
+        // toward the survivor in occasional large corrections.
+        double nx = dx / distance;
+        double ny = dy / distance;
+        double nz = dz / distance;
+        ghost.setPos(survivor.getX() + nx * radius,
+                survivor.getY() + ny * radius,
+                survivor.getZ() + nz * radius);
+
+        net.minecraft.world.phys.Vec3 velocity = ghost.getDeltaMovement();
+        double outwardSpeed = velocity.x * nx + velocity.y * ny + velocity.z * nz;
+        if (outwardSpeed > 0.0) {
+            ghost.setDeltaMovement(velocity.x - nx * outwardSpeed,
+                    velocity.y - ny * outwardSpeed,
+                    velocity.z - nz * outwardSpeed);
+        }
     }
 
     private static boolean nearBeacon(ServerPlayer player, CompoundTag data) {
