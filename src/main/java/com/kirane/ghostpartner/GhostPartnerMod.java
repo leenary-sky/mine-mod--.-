@@ -279,8 +279,8 @@ public final class GhostPartnerMod implements ModInitializer {
         if (distance <= GhostPartnerConfig.ghostRadius || distance < 0.001) return;
 
         double targetX = survivor.getX() + dx / distance * (GhostPartnerConfig.ghostRadius - 0.75);
-        double targetY = survivor.getY() + dy / distance * (GHOST_RADIUS - 0.75);
-        double targetZ = survivor.getZ() + dz / distance * (GHOST_RADIUS - 0.75);
+        double targetY = survivor.getY() + dy / distance * (GhostPartnerConfig.ghostRadius - 0.75);
+        double targetZ = survivor.getZ() + dz / distance * (GhostPartnerConfig.ghostRadius - 0.75);
         double factor = Math.min(0.35, (distance - GhostPartnerConfig.ghostRadius + 0.5) / distance);
         ghost.setPos(ghost.getX() + (targetX - ghost.getX()) * factor,
                 ghost.getY() + (targetY - ghost.getY()) * factor,
