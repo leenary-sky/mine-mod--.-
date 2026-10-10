@@ -4,12 +4,14 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -44,6 +46,7 @@ public final class GhostPartnerMod implements ModInitializer {
     @Override
     public void onInitialize() {
         GhostPartnerConfig.load();
+        PayloadTypeRegistry.clientboundPlay().register(RoundHudPayload.TYPE, RoundHudPayload.CODEC);
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             if (!(entity instanceof ServerPlayer dead)) return;
             MinecraftServer server = dead.level().getServer();
@@ -103,22 +106,7 @@ public final class GhostPartnerMod implements ModInitializer {
             if (ghostId != null && ghostId.equals(handler.getPlayer().getUUID())) {
                 handler.getPlayer().setGameMode(GameType.SPECTATOR);
             }
-        });
-
-        UseItemCallback.EVENT.register((player, level, hand) -> {
-            if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
-                return InteractionResult.PASS;
-            }
-            CompoundTag data = data(serverPlayer.level().getServer());
-            if (!ACTIVE.equals(data.getStringOr(STATUS, IDLE))) return InteractionResult.PASS;
-            UUID survivor = uuid(data.getStringOr("survivor", ""));
-            if (survivor != null && survivor.equals(serverPlayer.getUUID())
-                    && serverPlayer.getItemInHand(hand).isEmpty()
-                    && nearBeacon(serverPlayer, data)) {
-                data.putBoolean("rightClickHeld", true);
-                save(serverPlayer.level().getServer(), data);
-            }
-            return InteractionResult.PASS;
+            syncHud(handler.getPlayer(), data, server);
         });
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
@@ -143,6 +131,10 @@ public final class GhostPartnerMod implements ModInitializer {
                     data.remove("survivor");
                     data.remove("deadline");
                     data.remove("ritualTicks");
+                    for (ServerPlayer player : context.getSource().getServer().getPlayerList().getPlayers()) {
+                        if (player.gameMode() == GameType.SPECTATOR) player.setGameMode(GameType.SURVIVAL);
+                    }
+                    syncHud(context.getSource().getServer(), data);
                     save(context.getSource().getServer(), data);
                     context.getSource().sendSuccess(() -> Component.literal("Тестовый раунд сброшен."), true);
                     return 1;
@@ -202,13 +194,8 @@ public final class GhostPartnerMod implements ModInitializer {
             }
         }
 
-        if (server.getTickCount() % 20 == 0) {
-            int seconds = (int) Math.max(0, remaining / 1000);
-            String timer = String.format("СПАСИТЕ НАПАРНИКА: %02d:%02d", seconds / 60, seconds % 60);
-            survivor.sendSystemMessage(Component.literal(timer + " | маяк: "
-                    + (int) data.getDoubleOr("deathX", 0.0) + " "
-                    + (int) data.getDoubleOr("deathY", 0.0) + " "
-                    + (int) data.getDoubleOr("deathZ", 0.0)), true);
+        if (server.getTickCount() % 5 == 0) {
+            syncHud(server, data);
         }
 
         updateRitual(server, survivor, ghost, data);
@@ -224,7 +211,7 @@ public final class GhostPartnerMod implements ModInitializer {
         boolean moved = dx * dx + dy * dy + dz * dz > 0.01;
         float oldHealth = data.getFloatOr("lastHealth", survivor.getHealth());
         boolean damaged = survivor.getHealth() < oldHealth;
-        boolean holding = survivor.isShiftKeyDown() || data.getBooleanOr("rightClickHeld", false);
+        boolean holding = survivor.isShiftKeyDown();
 
         int progress = data.getIntOr("ritualTicks", 0);
         if (atBeacon && holding && !moved && !damaged) {
@@ -233,17 +220,12 @@ public final class GhostPartnerMod implements ModInitializer {
             progress = 0;
         }
         data.putInt("ritualTicks", progress);
-        data.putBoolean("rightClickHeld", false);
         data.putDouble("lastX", survivor.getX());
         data.putDouble("lastY", survivor.getY());
         data.putDouble("lastZ", survivor.getZ());
         data.putFloat("lastHealth", survivor.getHealth());
 
-        if (progress > 0 && server.getTickCount() % 5 == 0) {
-            int percent = Math.min(100, progress * 100 / (GhostPartnerConfig.ritualSeconds * 20));
-            survivor.sendSystemMessage(Component.literal("ВОСКРЕШЕНИЕ: " + percent + "%"), true);
-        }
-        if (progress < GhostPartnerConfig.ritualSeconds * 20) return;
+        if (progress < GhostPartnerConfig.ritualSeconds * 20 || ghost == null) return;
 
         ServerLevel deathLevel = findDeathLevel(server, data);
         if (deathLevel == null) {
@@ -268,7 +250,43 @@ public final class GhostPartnerMod implements ModInitializer {
         data.remove("deadline");
         data.remove("ritualTicks");
         survivor.sendSystemMessage(Component.literal("Напарник воскрешён! Раунд продолжается."));
+        syncHud(server, data);
         save(server, data);
+    }
+
+    /**
+     * Sends authoritative round state to clients. Rendering never owns game rules:
+     * it only displays this snapshot and can later be replaced without touching mechanics.
+     */
+    private static void syncHud(MinecraftServer server, CompoundTag data) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            syncHud(player, data, server);
+        }
+    }
+
+    private static void syncHud(ServerPlayer player, CompoundTag data, MinecraftServer server) {
+        String status = data.getStringOr(STATUS, IDLE);
+        if (ACTIVE.equals(status)) {
+            UUID ghostId = uuid(data.getStringOr("ghost", ""));
+            UUID survivorId = uuid(data.getStringOr("survivor", ""));
+            byte role = ghostId != null && ghostId.equals(player.getUUID()) ? (byte) 2
+                    : survivorId != null && survivorId.equals(player.getUUID()) ? (byte) 1 : (byte) 0;
+            int seconds = (int) Math.max(0,
+                    (data.getLongOr("deadline", 0L) - System.currentTimeMillis() + 999L) / 1000L);
+            BlockPos target = BlockPos.containing(
+                    data.getDoubleOr("deathX", 0.0),
+                    data.getDoubleOr("deathY", 0.0),
+                    data.getDoubleOr("deathZ", 0.0));
+            ServerPlayNetworking.send(player, new RoundHudPayload(
+                    true, role, seconds, target,
+                    data.getIntOr("ritualTicks", 0), GhostPartnerConfig.ritualSeconds * 20));
+        } else if (LOST.equals(status)) {
+            ServerPlayNetworking.send(player, new RoundHudPayload(
+                    false, (byte) 3, 0, BlockPos.ZERO, 0, GhostPartnerConfig.ritualSeconds * 20));
+        } else {
+            ServerPlayNetworking.send(player, new RoundHudPayload(
+                    false, (byte) 0, 0, BlockPos.ZERO, 0, GhostPartnerConfig.ritualSeconds * 20));
+        }
     }
 
     private static void keepGhostNear(ServerPlayer ghost, ServerPlayer survivor) {
@@ -317,10 +335,12 @@ public final class GhostPartnerMod implements ModInitializer {
         if (LOST.equals(data.getStringOr(STATUS, IDLE))) return;
         data.putString(STATUS, LOST);
         save(server, data);
+        syncHud(server, data);
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             player.sendSystemMessage(Component.literal(message), false);
             player.setGameMode(GameType.SPECTATOR);
         }
+        syncHud(server, data);
         LOGGER.warn(message);
     }
 
