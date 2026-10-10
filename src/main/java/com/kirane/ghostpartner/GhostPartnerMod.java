@@ -86,7 +86,7 @@ public final class GhostPartnerMod implements ModInitializer {
             data.putFloat("lastHealth", partner.getHealth());
             save(server, data);
 
-            partner.sendSystemMessage(Component.literal("Напарник погиб. У тебя четыре минуты, чтобы воскресить его!"));
+            partner.sendSystemMessage(Component.literal("Напарник погиб. У тебя " + GhostPartnerConfig.timerSeconds + " секунд, чтобы воскресить его!"));
             dead.sendSystemMessage(Component.literal("Ты стал призраком. Разведывай путь и помоги напарнику добраться до маяка."));
         });
 
