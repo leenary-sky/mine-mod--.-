@@ -115,7 +115,7 @@ public final class GhostPartnerMod implements ModInitializer {
                 double x = survivor.getX() + 1.25;
                 double y = survivor.getY();
                 double z = survivor.getZ() + 0.25;
-                newPlayer.teleportTo(survivor.serverLevel(), x, y, z,
+                newPlayer.teleportTo(survivor.level(), x, y, z,
                         Relative.ROTATION, newPlayer.getYRot(), newPlayer.getXRot(), true);
                 prepareGhostMovement(newPlayer);
                 newPlayer.setDeltaMovement(0.0, 0.0, 0.0);
