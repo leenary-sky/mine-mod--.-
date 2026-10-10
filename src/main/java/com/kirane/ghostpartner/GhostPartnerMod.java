@@ -19,7 +19,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Relative;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -336,7 +335,6 @@ public final class GhostPartnerMod implements ModInitializer {
         if (LOST.equals(data.getStringOr(STATUS, IDLE))) return;
         data.putString(STATUS, LOST);
         save(server, data);
-        syncHud(server, data);
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             player.sendSystemMessage(Component.literal(message), false);
             player.setGameMode(GameType.SPECTATOR);
