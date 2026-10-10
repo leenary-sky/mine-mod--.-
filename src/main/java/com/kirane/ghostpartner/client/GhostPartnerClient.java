@@ -79,7 +79,7 @@ public final class GhostPartnerClient implements ClientModInitializer {
         double dx = targetX - smoothX, dy = targetY - smoothY, dz = targetZ - smoothZ;
         float lookYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
         float lookPitch = (float)-Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
-        ((GhostCameraAccess) (Object) camera).ghostPartner$setRotation(lookYaw, lookPitch);
+        ((CameraAccess) (Object) camera).ghostPartner$setRotation(lookYaw, lookPitch);
     }
 
     @Override
