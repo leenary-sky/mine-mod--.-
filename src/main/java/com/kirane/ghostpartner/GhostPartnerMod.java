@@ -47,6 +47,17 @@ public final class GhostPartnerMod implements ModInitializer {
     public void onInitialize() {
         GhostPartnerConfig.load();
         PayloadTypeRegistry.clientboundPlay().register(RoundHudPayload.TYPE, RoundHudPayload.CODEC);
+        ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+            if (!(entity instanceof ServerPlayer player)) return true;
+            MinecraftServer server = player.level().getServer();
+            if (server == null) return true;
+            CompoundTag round = data(server);
+            if (!ACTIVE.equals(round.getStringOr(STATUS, IDLE))) return true;
+            UUID ghostId = uuid(round.getStringOr("ghost", ""));
+            // The ghost is a flying spectator-like guide, not a second health bar to manage.
+            return ghostId == null || !ghostId.equals(player.getUUID());
+        });
+
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             if (!(entity instanceof ServerPlayer dead)) return;
             MinecraftServer server = dead.level().getServer();
@@ -368,9 +379,12 @@ public final class GhostPartnerMod implements ModInitializer {
         double nx = dx / distance;
         double ny = dy / distance;
         double nz = dz / distance;
-        ghost.setPos(survivor.getX() + nx * radius,
-                survivor.getY() + ny * radius,
-                survivor.getZ() + nz * radius);
+        // Keep the ghost just inside the limit. Clamping to the exact boundary makes
+        // client/server collision correction look like a repeated rubber-band teleport.
+        double safeRadius = Math.max(0.0, radius - 0.08);
+        ghost.setPos(survivor.getX() + nx * safeRadius,
+                survivor.getY() + ny * safeRadius,
+                survivor.getZ() + nz * safeRadius);
 
         net.minecraft.world.phys.Vec3 velocity = ghost.getDeltaMovement();
         double outwardSpeed = velocity.x * nx + velocity.y * ny + velocity.z * nz;
