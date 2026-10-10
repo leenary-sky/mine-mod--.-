@@ -228,7 +228,13 @@ public final class GhostPartnerMod implements ModInitializer {
         data.putDouble("lastZ", survivor.getZ());
         data.putFloat("lastHealth", survivor.getHealth());
 
-        if (progress < GhostPartnerConfig.ritualSeconds * 20 || ghost == null) return;
+        int ritualGoal = GhostPartnerConfig.ritualSeconds * 20;
+        if (ghost == null && progress >= ritualGoal) {
+            // Do not display a completed ritual when the player to resurrect is offline.
+            data.putInt("ritualTicks", Math.max(0, ritualGoal - 1));
+            return;
+        }
+        if (progress < ritualGoal) return;
 
         ServerLevel deathLevel = findDeathLevel(server, data);
         if (deathLevel == null) {
