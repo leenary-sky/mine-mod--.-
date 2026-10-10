@@ -103,14 +103,14 @@ public final class GhostPartnerMod implements ModInitializer {
             if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
                 return InteractionResult.PASS;
             }
-            CompoundTag data = data(serverPlayer.server);
+            CompoundTag data = data(serverPlayer.level().getServer());
             if (!ACTIVE.equals(data.getStringOr(STATUS, IDLE))) return InteractionResult.PASS;
             UUID survivor = uuid(data.getStringOr("survivor", ""));
             if (survivor != null && survivor.equals(serverPlayer.getUUID())
                     && serverPlayer.getItemInHand(hand).isEmpty()
                     && nearBeacon(serverPlayer, data)) {
                 data.putBoolean("rightClickHeld", true);
-                save(serverPlayer.server, data);
+                save(serverPlayer.level().getServer(), data);
             }
             return InteractionResult.PASS;
         });
