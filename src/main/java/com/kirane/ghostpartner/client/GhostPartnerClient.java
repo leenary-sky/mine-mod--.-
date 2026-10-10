@@ -26,6 +26,53 @@ public final class GhostPartnerClient implements ClientModInitializer {
     private static net.minecraft.client.player.LocalPlayer lastObservedPlayer;
     private static final long TRANSITION_DURATION_MS = 1000L;
     private static final long TRANSITION_PEAK_MS = 360L;
+    private static double orbitDistance = 5.0;
+    private static double smoothX = Double.NaN, smoothY = Double.NaN, smoothZ = Double.NaN;
+
+    public static boolean isGhostCameraActive() {
+        return state.active() && state.role() == 2;
+    }
+
+    public static void adjustOrbitZoom(double scroll) {
+        orbitDistance = Mth.clamp(orbitDistance - scroll * 0.8, 2.0, 14.0);
+    }
+
+    public static void applyOrbitCamera(net.minecraft.client.Camera camera) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!isGhostCameraActive() || mc.player == null || mc.level == null) {
+            smoothX = smoothY = smoothZ = Double.NaN;
+            return;
+        }
+        net.minecraft.client.player.LocalPlayer ghost = mc.player;
+        net.minecraft.client.player.AbstractClientPlayer target = null;
+        for (net.minecraft.client.player.AbstractClientPlayer candidate : mc.level.players()) {
+            if (candidate != ghost) { target = candidate; break; }
+        }
+        if (target == null) return;
+
+        double targetX = target.getX();
+        double targetY = target.getY() + target.getBbHeight() * 0.82;
+        double targetZ = target.getZ();
+        double yaw = Math.toRadians(ghost.getYRot());
+        double pitch = Math.toRadians(Mth.clamp(ghost.getXRot(), -75.0f, 75.0f));
+        double horizontal = Math.cos(pitch) * orbitDistance;
+        double desiredX = targetX - Math.sin(yaw) * horizontal;
+        double desiredY = targetY + Math.sin(pitch) * orbitDistance;
+        double desiredZ = targetZ + Math.cos(yaw) * horizontal;
+
+        if (Double.isNaN(smoothX)) {
+            smoothX = desiredX; smoothY = desiredY; smoothZ = desiredZ;
+        } else {
+            smoothX += (desiredX - smoothX) * 0.22;
+            smoothY += (desiredY - smoothY) * 0.22;
+            smoothZ += (desiredZ - smoothZ) * 0.22;
+        }
+        camera.setPosition(smoothX, smoothY, smoothZ);
+        double dx = targetX - smoothX, dy = targetY - smoothY, dz = targetZ - smoothZ;
+        float lookYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
+        float lookPitch = (float)-Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
+        camera.setRotation(lookYaw, lookPitch);
+    }
 
     @Override
     public void onInitializeClient() {
