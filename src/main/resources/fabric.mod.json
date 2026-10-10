@@ -23,5 +23,8 @@
   },
   "suggests": {
     "voicechat": "*"
-  }
+  },
+  "mixins": [
+    "ghostpartner.mixins.json"
+  ]
 }
