@@ -16,6 +16,7 @@ public record RoundHudPayload(
         byte role,
         int remainingSeconds,
         BlockPos target,
+        boolean targetInSameDimension,
         int ritualTicks,
         int ritualTotalTicks
 ) implements CustomPacketPayload {
@@ -27,6 +28,7 @@ public record RoundHudPayload(
             ByteBufCodecs.BYTE, RoundHudPayload::role,
             ByteBufCodecs.VAR_INT, RoundHudPayload::remainingSeconds,
             BlockPos.STREAM_CODEC, RoundHudPayload::target,
+            ByteBufCodecs.BOOL, RoundHudPayload::targetInSameDimension,
             ByteBufCodecs.VAR_INT, RoundHudPayload::ritualTicks,
             ByteBufCodecs.VAR_INT, RoundHudPayload::ritualTotalTicks,
             RoundHudPayload::new
