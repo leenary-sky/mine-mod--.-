@@ -2,7 +2,7 @@ package com.kirane.ghostpartner.client.mixin;
 
 import com.kirane.ghostpartner.client.GhostPartnerClient;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.hud.Hud;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.client.DeltaTracker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
