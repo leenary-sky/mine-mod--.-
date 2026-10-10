@@ -18,7 +18,8 @@ public final class GhostPartnerConfig {
     public static double reviveHealth = 6.0;
     public static int resistanceSeconds = 3;
     public static boolean soulParticles = true;
-    public static boolean simpleVoiceChatIntegration = true;
+    // Reserved for a future optional integration; no voice-chat API is bundled yet.
+    public static boolean simpleVoiceChatIntegration = false;
     public static boolean deleteWorldOnFailure = false;
 
     private GhostPartnerConfig() {}
@@ -39,7 +40,7 @@ public final class GhostPartnerConfig {
         reviveHealth = clamp(parseDouble(properties, "reviveHealth", 6.0), 2.0, 20.0);
         resistanceSeconds = clamp(parseInt(properties, "resistanceSeconds", 3), 1, 30);
         soulParticles = Boolean.parseBoolean(properties.getProperty("soulParticles", "true"));
-        simpleVoiceChatIntegration = Boolean.parseBoolean(properties.getProperty("simpleVoiceChatIntegration", "true"));
+        simpleVoiceChatIntegration = Boolean.parseBoolean(properties.getProperty("simpleVoiceChatIntegration", "false"));
         deleteWorldOnFailure = Boolean.parseBoolean(properties.getProperty("deleteWorldOnFailure", "false"));
 
         properties.setProperty("timerSeconds", Integer.toString(timerSeconds));
@@ -49,6 +50,7 @@ public final class GhostPartnerConfig {
         properties.setProperty("resistanceSeconds", Integer.toString(resistanceSeconds));
         properties.setProperty("soulParticles", Boolean.toString(soulParticles));
         properties.setProperty("simpleVoiceChatIntegration", Boolean.toString(simpleVoiceChatIntegration));
+        properties.setProperty("# voice chat note", "Reserved only; enabling this flag does not add voice chat integration.");
         properties.setProperty("deleteWorldOnFailure", Boolean.toString(deleteWorldOnFailure));
         properties.setProperty("# warning", "deleteWorldOnFailure is reserved and does not delete worlds in this build.");
 
