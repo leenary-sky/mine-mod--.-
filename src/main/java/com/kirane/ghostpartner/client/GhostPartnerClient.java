@@ -4,7 +4,7 @@ import com.kirane.ghostpartner.GhostPartnerMod;
 import com.kirane.ghostpartner.RoundHudPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientPlayerEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -23,6 +23,7 @@ public final class GhostPartnerClient implements ClientModInitializer {
     private static volatile RoundHudPayload state =
             new RoundHudPayload(false, (byte) 0, 0, BlockPos.ZERO, false, 0, 100);
     private static volatile long transitionStartedAt = 0L;
+    private static net.minecraft.client.player.LocalPlayer lastObservedPlayer;
     private static final long TRANSITION_DURATION_MS = 1000L;
     private static final long TRANSITION_PEAK_MS = 360L;
 
@@ -30,8 +31,12 @@ public final class GhostPartnerClient implements ClientModInitializer {
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(RoundHudPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> state = payload));
-        ClientPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
-                transitionStartedAt = System.currentTimeMillis());
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player != null && lastObservedPlayer != null && client.player != lastObservedPlayer) {
+                transitionStartedAt = System.currentTimeMillis();
+            }
+            lastObservedPlayer = client.player;
+        });
         HudElementRegistry.addLast(
                 Identifier.parse(GhostPartnerMod.MOD_ID + ":round_hud"),
                 GhostPartnerClient::renderHud
