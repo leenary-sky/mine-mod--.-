@@ -288,13 +288,14 @@ public final class GhostPartnerMod implements ModInitializer {
                     data.getDoubleOr("deathZ", 0.0));
             ServerPlayNetworking.send(player, new RoundHudPayload(
                     true, role, seconds, target,
+                    player.level().dimension().toString().equals(data.getStringOr("deathDimension", "")),
                     data.getIntOr("ritualTicks", 0), GhostPartnerConfig.ritualSeconds * 20));
         } else if (LOST.equals(status)) {
             ServerPlayNetworking.send(player, new RoundHudPayload(
-                    false, (byte) 3, 0, BlockPos.ZERO, 0, GhostPartnerConfig.ritualSeconds * 20));
+                    false, (byte) 3, 0, BlockPos.ZERO, false, 0, GhostPartnerConfig.ritualSeconds * 20));
         } else {
             ServerPlayNetworking.send(player, new RoundHudPayload(
-                    false, (byte) 0, 0, BlockPos.ZERO, 0, GhostPartnerConfig.ritualSeconds * 20));
+                    false, (byte) 0, 0, BlockPos.ZERO, false, 0, GhostPartnerConfig.ritualSeconds * 20));
         }
     }
 
