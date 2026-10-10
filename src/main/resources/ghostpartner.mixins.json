@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "com.kirane.ghostpartner.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "GhostCameraMixin",
+    "GhostMouseMixin",
+    "GhostHudMixin",
+    "GhostDeathScreenMixin",
+    "GhostCompassUseMixin",
+    "LivingEntityRendererAccessor",
+    "AvatarRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
