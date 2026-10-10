@@ -3,6 +3,7 @@ package com.kirane.ghostpartner;
 import com.mojang.brigadier.CommandDispatcher;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -88,6 +89,39 @@ public final class GhostPartnerMod implements ModInitializer {
 
             partner.sendSystemMessage(Component.literal("Напарник погиб. У тебя " + GhostPartnerConfig.timerSeconds + " секунд, чтобы воскресить его!"));
             dead.sendSystemMessage(Component.literal("Ты стал призраком. Разведывай путь и помоги напарнику добраться до маяка."));
+        });
+
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            MinecraftServer server = newPlayer.level().getServer();
+            if (server == null) return;
+            CompoundTag data = data(server);
+            if (!ACTIVE.equals(data.getStringOr(STATUS, IDLE))) {
+                syncHud(newPlayer, data, server);
+                return;
+            }
+
+            UUID ghostId = uuid(data.getStringOr("ghost", ""));
+            if (ghostId == null || !ghostId.equals(newPlayer.getUUID())) {
+                syncHud(newPlayer, data, server);
+                return;
+            }
+
+            // The player entity is replaced on respawn, so re-apply ghost abilities here.
+            prepareGhostMovement(newPlayer);
+            UUID survivorId = uuid(data.getStringOr("survivor", ""));
+            ServerPlayer survivor = survivorId == null ? null : server.getPlayerList().getPlayer(survivorId);
+            if (survivor != null) {
+                // Put the ghost beside the living partner, regardless of who hosted the world.
+                double x = survivor.getX() + 1.25;
+                double y = survivor.getY();
+                double z = survivor.getZ() + 0.25;
+                newPlayer.teleportTo(survivor.serverLevel(), x, y, z,
+                        Relative.ROTATION, newPlayer.getYRot(), newPlayer.getXRot(), true);
+                prepareGhostMovement(newPlayer);
+                newPlayer.setDeltaMovement(0.0, 0.0, 0.0);
+            }
+            syncHud(newPlayer, data, server);
+            LOGGER.info("Respawned ghost {} beside partner {}", newPlayer.getGameProfile().name(), survivor == null ? "offline" : survivor.getGameProfile().name());
         });
 
         ServerTickEvents.END_SERVER_TICK.register(GhostPartnerMod::tick);
