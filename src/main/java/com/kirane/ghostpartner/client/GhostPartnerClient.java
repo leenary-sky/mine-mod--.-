@@ -69,11 +69,11 @@ public final class GhostPartnerClient implements ClientModInitializer {
             smoothY += (desiredY - smoothY) * 0.22;
             smoothZ += (desiredZ - smoothZ) * 0.22;
         }
-        camera.setPosition(smoothX, smoothY, smoothZ);
+        ((GhostCameraAccess) (Object) camera).ghostPartner$setPosition(new Vec3(smoothX, smoothY, smoothZ));
         double dx = targetX - smoothX, dy = targetY - smoothY, dz = targetZ - smoothZ;
         float lookYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
         float lookPitch = (float)-Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
-        camera.setRotation(lookYaw, lookPitch);
+        ((GhostCameraAccess) (Object) camera).ghostPartner$setRotation(lookYaw, lookPitch);
     }
 
     @Override
