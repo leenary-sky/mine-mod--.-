@@ -24,8 +24,10 @@ public final class GhostPartnerClient implements ClientModInitializer {
             new RoundHudPayload(false, (byte) 0, 0, BlockPos.ZERO, false, 0, 100);
     private static volatile long transitionStartedAt = 0L;
     private static net.minecraft.client.player.LocalPlayer lastObservedPlayer;
-    private static final long TRANSITION_DURATION_MS = 1000L;
-    private static final long TRANSITION_PEAK_MS = 360L;
+    private static final long FADE_IN_MS = 3500L;
+    private static final long BLACK_HOLD_MS = 1000L;
+    private static final long FADE_OUT_MS = 3500L;
+    private static final long TRANSITION_DURATION_MS = FADE_IN_MS + BLACK_HOLD_MS + FADE_OUT_MS;
     private static double orbitDistance = 5.0;
     private static double smoothX = Double.NaN, smoothY = Double.NaN, smoothZ = Double.NaN;
 
@@ -79,7 +81,12 @@ public final class GhostPartnerClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(RoundHudPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> state = payload));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player != null && lastObservedPlayer != null && client.player != lastObservedPlayer) {
+            if (client.player != null && state.active() && state.role() == 2
+                    && client.player.getHealth() <= 0.0f && transitionStartedAt == 0L) {
+                transitionStartedAt = System.currentTimeMillis();
+            }
+            if (client.player != null && lastObservedPlayer != null && client.player != lastObservedPlayer
+                    && transitionStartedAt == 0L) {
                 transitionStartedAt = System.currentTimeMillis();
             }
             lastObservedPlayer = client.player;
@@ -161,13 +168,14 @@ public final class GhostPartnerClient implements ClientModInitializer {
         }
 
         float amount;
-        if (elapsed <= TRANSITION_PEAK_MS) {
-            amount = elapsed / (float) TRANSITION_PEAK_MS;
+        if (elapsed <= FADE_IN_MS) {
+            amount = elapsed / (float) FADE_IN_MS;
+        } else if (elapsed <= FADE_IN_MS + BLACK_HOLD_MS) {
+            amount = 1.0f;
         } else {
-            amount = 1.0f - (elapsed - TRANSITION_PEAK_MS)
-                    / (float) (TRANSITION_DURATION_MS - TRANSITION_PEAK_MS);
+            amount = 1.0f - (elapsed - FADE_IN_MS - BLACK_HOLD_MS) / (float) FADE_OUT_MS;
         }
-        int alpha = Mth.clamp(Math.round(220.0f * amount), 0, 220);
+        int alpha = Mth.clamp(Math.round(255.0f * amount), 0, 255);
         int width = minecraft.getWindow().getGuiScaledWidth();
         int height = minecraft.getWindow().getGuiScaledHeight();
         graphics.fill(0, 0, width, height, (alpha << 24));
