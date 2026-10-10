@@ -2,7 +2,6 @@ package com.kirane.ghostpartner.client;
 
 import com.kirane.ghostpartner.GhostPartnerMod;
 import com.kirane.ghostpartner.RoundHudPayload;
-import com.kirane.ghostpartner.client.mixin.GhostCameraAccess;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -21,6 +20,11 @@ import net.minecraft.world.item.Items;
  * Art direction and asset files are intentionally kept separate from this renderer.
  */
 public final class GhostPartnerClient implements ClientModInitializer {
+    /** Implemented by GhostCameraMixin; nested here to keep it outside the mixin-owned package. */
+    public interface CameraAccess {
+        void ghostPartner$setPosition(Vec3 position);
+        void ghostPartner$setRotation(float yaw, float pitch);
+    }
     private static volatile RoundHudPayload state =
             new RoundHudPayload(false, (byte) 0, 0, BlockPos.ZERO, false, 0, 100);
     private static volatile long transitionStartedAt = 0L;
@@ -71,7 +75,7 @@ public final class GhostPartnerClient implements ClientModInitializer {
             smoothY += (desiredY - smoothY) * 0.22;
             smoothZ += (desiredZ - smoothZ) * 0.22;
         }
-        ((GhostCameraAccess) (Object) camera).ghostPartner$setPosition(new Vec3(smoothX, smoothY, smoothZ));
+        ((CameraAccess) (Object) camera).ghostPartner$setPosition(new Vec3(smoothX, smoothY, smoothZ));
         double dx = targetX - smoothX, dy = targetY - smoothY, dz = targetZ - smoothZ;
         float lookYaw = (float)(Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
         float lookPitch = (float)-Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
