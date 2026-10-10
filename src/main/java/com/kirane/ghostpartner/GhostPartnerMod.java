@@ -99,6 +99,7 @@ public final class GhostPartnerMod implements ModInitializer {
             if (LOST.equals(status)) {
                 handler.getPlayer().setGameMode(GameType.SPECTATOR);
                 handler.getPlayer().sendSystemMessage(Component.literal("Раунд уже проигран. Оператор может сбросить тест командой /ghostpartner reset."));
+                syncHud(handler.getPlayer(), data, server);
                 return;
             }
             if (!ACTIVE.equals(status)) return;
