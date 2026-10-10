@@ -49,7 +49,6 @@ public final class GhostPartnerClient implements ClientModInitializer {
             return;
         }
 
-        Minecraft.PlayerAttackIndicatorStatus unused = null;
         int screenWidth = minecraft.getWindow().getGuiScaledWidth();
         int x = screenWidth / 2 - 118;
         int y = 12;
