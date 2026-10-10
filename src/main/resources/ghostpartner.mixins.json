@@ -6,7 +6,9 @@
     "GhostCameraMixin",
     "GhostMouseMixin",
     "GhostHudMixin",
-    "GhostDeathScreenMixin"
+    "GhostDeathScreenMixin",
+    "LivingEntityRendererAccessor",
+    "AvatarRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
