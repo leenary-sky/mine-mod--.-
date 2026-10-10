@@ -372,19 +372,15 @@ public final class GhostPartnerMod implements ModInitializer {
         double dz = ghost.getZ() - survivor.getZ();
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         double radius = GhostPartnerConfig.ghostRadius;
-        if (distance <= radius || distance < 0.001) return;
+        if (distance < 0.001 || distance <= radius) return;
 
-        // A hard spherical tether: clamp to the boundary every tick instead of teleporting
-        // toward the survivor in occasional large corrections.
+        // Rope behaviour: don't snap/teleport the ghost back. Keep its position on
+        // the boundary only for the excess distance, and remove velocity pointing outward.
         double nx = dx / distance;
         double ny = dy / distance;
         double nz = dz / distance;
-        // Keep the ghost just inside the limit. Clamping to the exact boundary makes
-        // client/server collision correction look like a repeated rubber-band teleport.
-        double safeRadius = Math.max(0.0, radius - 0.08);
-        ghost.setPos(survivor.getX() + nx * safeRadius,
-                survivor.getY() + ny * safeRadius,
-                survivor.getZ() + nz * safeRadius);
+        double excess = distance - radius;
+        ghost.setPos(ghost.getX() - nx * excess, ghost.getY() - ny * excess, ghost.getZ() - nz * excess);
 
         net.minecraft.world.phys.Vec3 velocity = ghost.getDeltaMovement();
         double outwardSpeed = velocity.x * nx + velocity.y * ny + velocity.z * nz;
