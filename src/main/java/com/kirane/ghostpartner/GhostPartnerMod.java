@@ -90,7 +90,13 @@ public final class GhostPartnerMod implements ModInitializer {
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             CompoundTag data = data(server);
-            if (!ACTIVE.equals(data.getStringOr(STATUS, IDLE))) return;
+            String status = data.getStringOr(STATUS, IDLE);
+            if (LOST.equals(status)) {
+                handler.getPlayer().setGameMode(GameType.SPECTATOR);
+                handler.getPlayer().sendSystemMessage(Component.literal("Раунд уже проигран. Оператор может сбросить тест командой /ghostpartner reset."));
+                return;
+            }
+            if (!ACTIVE.equals(status)) return;
             UUID ghostId = uuid(data.getStringOr("ghost", ""));
             if (ghostId != null && ghostId.equals(handler.getPlayer().getUUID())) {
                 handler.getPlayer().setGameMode(GameType.SPECTATOR);
@@ -144,6 +150,12 @@ public final class GhostPartnerMod implements ModInitializer {
     private static void tick(MinecraftServer server) {
         CompoundTag data = data(server);
         String status = data.getStringOr(STATUS, IDLE);
+        if (LOST.equals(status)) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                if (player.gameMode() != GameType.SPECTATOR) player.setGameMode(GameType.SPECTATOR);
+            }
+            return;
+        }
         if (!ACTIVE.equals(status)) return;
 
         long remaining = data.getLongOr("deadline", 0L) - System.currentTimeMillis();
